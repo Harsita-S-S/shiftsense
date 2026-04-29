@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ShiftSense — Import Your Shifts</title>
+<link rel="stylesheet" href="shared.css"/>
+<script src="config.js"></script>
+<style>
+  body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg);}
+  .ob-wrap{width:100%;max-width:560px;padding:24px 16px;}
+  .ob-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px;justify-content:center;}
+  .ob-logo img{width:36px;height:36px;border-radius:10px;}
+  .ob-logo span{font-size:20px;font-weight:800;color:var(--ink);}
+  .ob-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;}
+  .ob-step{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .ob-step-dot{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  h1{font-size:22px;font-weight:800;color:var(--ink);margin:0 0 6px;}
+  .sub{font-size:14px;color:var(--ink-3);margin:0 0 28px;}
+  .format-hint{background:var(--primary-l);border:1px solid var(--primary-m);border-radius:12px;padding:14px 16px;margin-bottom:24px;}
+  .format-hint p{font-size:12px;color:var(--primary-t);margin:0 0 6px;font-weight:600;}
+  .format-hint code{font-size:11.5px;color:var(--primary-d);font-family:monospace;line-height:1.7;display:block;}
+  .drop-zone{border:2px dashed var(--border-d);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;margin-bottom:20px;position:relative;}
+  .drop-zone:hover,.drop-zone.drag-over{border-color:var(--primary);background:var(--primary-l);}
+  .drop-icon{font-size:36px;margin-bottom:10px;}
+  .drop-label{font-size:14px;font-weight:600;color:var(--ink-2);margin-bottom:4px;}
+  .drop-sub{font-size:12px;color:var(--ink-4);}
+  #file-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .file-chosen{font-size:13px;font-weight:600;color:var(--primary);margin-top:8px;}
+  .preview-wrap{margin-bottom:20px;display:none;}
+  .preview-wrap h3{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 10px;}
+  .preview-table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border);}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{background:var(--bg);padding:8px 12px;text-align:left;font-weight:700;color:var(--ink-3);border-bottom:1px solid var(--border);white-space:nowrap;}
+  td{padding:7px 12px;color:var(--ink-2);border-bottom:1px solid var(--border);}
+  tr:last-child td{border-bottom:none;}
+  .row-count{font-size:12px;color:var(--ink-3);margin-top:8px;}
+  .result-wrap{border-radius:12px;padding:16px;margin-bottom:20px;display:none;}
+  .result-wrap.success{background:var(--green-l);border:1px solid var(--green-m);}
+  .result-wrap.partial{background:var(--amber-l);border:1px solid var(--amber-m);}
+  .result-wrap.error{background:#FEE2E2;border:1px solid #FECACA;}
+  .result-title{font-size:14px;font-weight:700;margin-bottom:6px;}
+  .result-wrap.success .result-title{color:var(--green-t);}
+  .result-wrap.partial .result-title{color:var(--amber-t);}
+  .result-wrap.error .result-title{color:#991B1B;}
+  .result-detail{font-size:13px;color:var(--ink-2);line-height:1.6;}
+  .result-errors{font-size:12px;color:#991B1B;margin-top:8px;font-family:monospace;max-height:80px;overflow-y:auto;}
+  .btn-row{display:flex;gap:12px;align-items:center;}
+  .btn-primary{flex:1;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:background 0.15s;}
+  .btn-primary:hover{background:var(--primary-d);}
+  .btn-primary:disabled{opacity:0.55;cursor:not-allowed;}
+  .btn-skip{font-size:13px;color:var(--ink-3);text-decoration:none;white-space:nowrap;padding:8px 4px;transition:color 0.15s;}
+  .btn-skip:hover{color:var(--ink);}
+  .spinner{display:inline-block;width:16px;height:16px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="ob-wrap">
+  <div class="ob-logo">
+    <img src="logo.png" alt="ShiftSense"/>
+    <span>ShiftSense</span>
+  </div>
+  <div class="ob-card">
+    <div class="ob-step">
+      <div class="ob-step-dot">📂</div>
+    </div>
+    <h1>Import your past shifts</h1>
+    <p class="sub">Upload a CSV to get instant analytics. You can always add shifts manually later.</p>
+
+    <div class="format-hint">
+      <p>CSV format — one row per shift:</p>
+      <code>date,zone,platform,hours,earn,orders<br/>2024-03-15,Koramangala,Swiggy,6,850,12<br/>2024-03-16,Indiranagar,Zomato,5,720,9</code>
+    </div>
+
+    <div class="drop-zone" id="drop-zone">
+      <input type="file" id="file-input" accept=".csv,text/csv"/>
+      <div class="drop-icon">📄</div>
+      <div class="drop-label">Click to choose a CSV file</div>
+      <div class="drop-sub">or drag &amp; drop it here</div>
+      <div class="file-chosen" id="file-name" style="display:none;"></div>
+    </div>
+
+    <div class="preview-wrap" id="preview-wrap">
+      <h3 id="preview-title">Preview (first 5 rows)</h3>
+      <div class="preview-table-wrap">
+        <table id="preview-table"></table>
+      </div>
+      <div class="row-count" id="row-count"></div>
+    </div>
+
+    <div class="result-wrap" id="result-wrap">
+      <div class="result-title" id="result-title"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <div class="result-errors" id="result-errors" style="display:none;"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" id="upload-btn" onclick="doUpload()" disabled>Upload Shifts</button>
+      <a href="dashboard.html" class="btn-skip">Skip for now →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Guard: must be logged in
+  (function(){
+    const tok = localStorage.getItem('ss_token');
+    if(!tok) { window.location.href = 'index.html'; }
+  })();
+
+  let csvText = '';
+  let totalRows = 0;
+
+  const fileInput   = document.getElementById('file-input');
+  const dropZone    = document.getElementById('drop-zone');
+  const fileNameEl  = document.getElementById('file-name');
+  const previewWrap = document.getElementById('preview-wrap');
+  const uploadBtn   = document.getElementById('upload-btn');
+  const resultWrap  = document.getElementById('result-wrap');
+
+  // ── Drag & Drop ──────────────────────────────────────────────
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if(fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  function handleFile(file) {
+    if(!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      showResult('error', 'Invalid file', 'Please upload a .csv file.', []);
+      return;
+    }
+    fileNameEl.textContent = '✓ ' + file.name;
+    fileNameEl.style.display = 'block';
+    const reader = new FileReader();
+    reader.onload = e => {
+      csvText = e.target.result;
+      parseAndPreview(csvText);
+    };
+    reader.readAsText(file);
+  }
+
+  function parseAndPreview(text) {
+    // Hide previous result
+    resultWrap.style.display = 'none';
+
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if(lines.length < 2) {
+      previewWrap.style.display = 'none';
+      uploadBtn.disabled = true;
+      return;
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+    const dataLines = lines.slice(1);
+    totalRows = dataLines.length;
+
+    // Build preview table (first 5 rows)
+    const previewRows = dataLines.slice(0, 5);
+    let html = '<thead><tr>' + headers.map(h => `<th>${escHtml(h)}</th>`).join('') + '</tr></thead><tbody>';
+    for(const line of previewRows) {
+      const cells = parseCsvLine(line);
+      html += '<tr>' + cells.map(c => `<td>${escHtml(c.trim())}</td>`).join('') + '</tr>';
+    }
+    html += '</tbody>';
+
+    document.getElementById('preview-table').innerHTML = html;
+    document.getElementById('row-count').textContent =
+      `${totalRows} data row${totalRows !== 1 ? 's' : ''} found` +
+      (totalRows > 5 ? ` — showing first 5` : '');
+    previewWrap.style.display = 'block';
+    uploadBtn.disabled = false;
+  }
+
+  function parseCsvLine(line) {
+    const result = [];
+    let cur = '', inQ = false;
+    for(const ch of line) {
+      if(ch === '"') { inQ = !inQ; }
+      else if(ch === ',' && !inQ) { result.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    result.push(cur);
+    return result;
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function parseCsvToObjects(text) {
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    return lines.slice(1).map(line => {
+      const vals = parseCsvLine(line);
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = (vals[i] || '').trim());
+      // normalise date column name
+      if (obj.date && !obj.shift_date) obj.shift_date = obj.date;
+      return obj;
+    });
+  }
+
+  // ── Upload ───────────────────────────────────────────────────
+  async function doUpload() {
+    if(!csvText) return;
+    const token = localStorage.getItem('ss_token');
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<span class="spinner"></span>Uploading…';
+
+    try {
+      const res = await fetch(
+        (window.SS_CONFIG ? window.SS_CONFIG.API : 'http://localhost:3001/api') + '/shifts/bulk',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token,
+          },
+          body: JSON.stringify({ shifts: parseCsvToObjects(csvText) }),
+        }
+      );
+
+      const data = await res.json();
+
+      if(!res.ok) {
+        showResult('error', 'Upload failed', data.error || 'Something went wrong.', data.errors || []);
+        return;
+      }
+
+      const accepted = data.inserted || 0;
+      const rejected = (data.total || 0) - accepted;
+      const errors   = data.errors   || [];
+
+      if(accepted === 0) {
+        showResult('error', 'No rows accepted',
+          `All ${rejected} row${rejected !== 1 ? 's' : ''} were rejected. Check the format and try again.`,
+          errors);
+      } else if(rejected > 0) {
+        showResult('partial',
+          `✓ ${accepted} row${accepted !== 1 ? 's' : ''} imported, ${rejected} skipped`,
+          `${accepted} shift${accepted !== 1 ? 's' : ''} saved. ${rejected} row${rejected !== 1 ? 's' : ''} had issues.`,
+          errors);
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 2500);
+      } else {
+        showResult('success',
+          `✓ ${accepted} shift${accepted !== 1 ? 's' : ''} imported!`,
+          'Your shifts have been saved. Redirecting to your dashboard…',
+          []);
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 1800);
+      }
+
+    } catch(err) {
+      showResult('error', 'Connection error', err.message || 'Could not reach the server.', []);
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = 'Upload Shifts';
+    }
+  }
+
+  function showResult(type, title, detail, errors) {
+    resultWrap.className = 'result-wrap ' + type;
+    document.getElementById('result-title').textContent  = title;
+    document.getElementById('result-detail').textContent = detail;
+    const errEl = document.getElementById('result-errors');
+    if(errors && errors.length) {
+      errEl.textContent = errors.slice(0,10).join('\n');
+      errEl.style.display = 'block';
+    } else {
+      errEl.style.display = 'none';
+    }
+    resultWrap.style.display = 'block';
+  }
+</script>
+</body>
+</html>

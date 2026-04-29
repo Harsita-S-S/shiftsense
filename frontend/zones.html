@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShiftSense — Zones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+.zones-layout{display:grid;grid-template-columns:1fr 300px;gap:0;height:calc(100vh - 60px);overflow:hidden;}
+#map{width:100%;height:100%;}
+.zone-sidebar{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:background 0.25s,border-color 0.25s;}
+.zone-sidebar-head{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
+.zone-sidebar-head h2{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px;}
+.zone-sidebar-head p{font-size:11px;color:var(--ink-3);}
+.zone-filters{display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.filter-btn{padding:5px 12px;border-radius:100px;font-family:var(--font);font-size:11px;font-weight:600;border:1.5px solid var(--border);background:var(--bg);color:var(--ink-3);cursor:pointer;transition:all 0.18s;}
+.filter-btn:hover{border-color:var(--primary-m);color:var(--primary);}
+.filter-btn.active{border-color:var(--primary);background:var(--primary-l);color:var(--primary-d);}
+.zone-list{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+.zone-card{border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;cursor:pointer;transition:all 0.18s;background:var(--surface);}
+.zone-card:hover,.zone-card.active{border-color:var(--primary-m);background:var(--primary-l);}
+.zone-name{font-size:13px;font-weight:700;color:var(--ink);}
+.zone-meta{font-size:11px;color:var(--ink-3);margin-top:2px;}
+.zone-earn{font-size:14px;font-weight:800;color:var(--primary);margin-top:6px;}
+.zone-demand{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:0.3px;}
+.demand-high{background:var(--green-l);color:var(--green-t);}
+.demand-med{background:var(--amber-l);color:var(--amber-t);}
+.demand-low{background:var(--red-l);color:var(--red-t);}
+.zone-detail{padding:16px;border-top:1px solid var(--border);display:none;}
+.zone-detail.show{display:block;}
+.zd-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:10px;}
+.zd-row{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-3);padding:5px 0;border-bottom:1px solid var(--border);}
+.zd-row:last-child{border-bottom:none;}
+.zd-val{font-weight:600;color:var(--ink);}
+.map-topbar{position:absolute;top:12px;left:12px;z-index:1000;background:var(--surface);border-radius:var(--r);padding:10px 14px;box-shadow:var(--shadow);font-size:12px;border:1px solid var(--border);}
+.map-topbar span{font-weight:600;color:var(--primary);}
+.legend-box{position:absolute;bottom:24px;left:12px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow);}
+.legend-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--ink-3);margin-bottom:8px;}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-2);margin-bottom:4px;}
+.legend-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sb-logo"><img src="logo.png" style="width:22px;height:22px;object-fit:contain;border-radius:5px;" alt="ShiftSense"></div>
+    <button class="nav-btn" title="Dashboard" onclick="location.href='dashboard.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+    <button class="nav-btn" title="Shifts" onclick="location.href='shifts.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></button>
+    <button class="nav-btn active" title="Zones" onclick="location.href='zones.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+    <button class="nav-btn" title="Analytics" onclick="location.href='analytics.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></button>
+    <button class="nav-btn" title="History" onclick="location.href='history.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
+    <button class="nav-btn" title="Predict &amp; Model" onclick="location.href='predict.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+    <div class="sb-bottom">
+      <button class="nav-btn" title="Toggle Dark" onclick="document.body.classList.toggle('dark')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      <button class="nav-btn" title="Sign Out" onclick="signOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="tb-title"><h1>Zone Heatmap</h1><p>High-earning zones ranked for you</p></div>
+      <div class="tb-right">
+        <span class="method-tag" style="font-size:10px;padding:4px 8px">Smart Grouping</span>
+        <div class="profile-chip" onclick="location.href='index.html'">
+          <div class="avatar" id="user-av">R</div>
+          <div><div class="chip-name" id="chip-name">Rider</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="zones-layout">
+      <div style="position:relative">
+        <div id="map"></div>
+        <div class="map-topbar">Bengaluru · <span id="map-time-label">All day</span> · <span id="zone-count">8 zones</span></div>
+        <div class="legend-box">
+          <div class="legend-title">Demand Level</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>High demand</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#D97706"></div>Medium demand</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#DC2626"></div>Low demand</div>
+          <div class="legend-item" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--border)"><div class="legend-dot" style="background:#4F46E5;opacity:0.4;border-radius:3px;width:16px;height:16px;"></div>Earning zone</div>
+        </div>
+      </div>
+
+      <div class="zone-sidebar">
+        <div class="zone-sidebar-head">
+          <h2>Zone Insights</h2>
+          <p>Click a zone for details · Data from your shift history</p>
+        </div>
+        <div class="zone-filters">
+          <button class="filter-btn active" onclick="filterZones('all',this)">All Day</button>
+          <button class="filter-btn" onclick="filterZones('morning',this)">Morning</button>
+          <button class="filter-btn" onclick="filterZones('afternoon',this)">Afternoon</button>
+          <button class="filter-btn" onclick="filterZones('evening',this)">Evening</button>
+          <button class="filter-btn" onclick="filterZones('night',this)">Night</button>
+        </div>
+        <div class="zone-list" id="zone-list"></div>
+        <div class="zone-detail" id="zone-detail">
+          <div class="zd-title" id="zd-name">Zone Details</div>
+          <div class="zd-row"><span>Avg ₹/hour</span><span class="zd-val" id="zd-rate">—</span></div>
+          <div class="zd-row"><span>Zone Tier</span><span class="zd-val" id="zd-cluster">Cluster 1 (High)</span></div>
+          <div class="zd-row"><span>Best time slot</span><span class="zd-val" id="zd-peak">7–10 PM</span></div>
+          <div class="zd-row"><span>Your shifts here</span><span class="zd-val" id="zd-shifts">—</span></div>
+          <div class="zd-row"><span>Trend</span><span class="zd-val" id="zd-trend">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="config.js"></script>
+<script>
+const ZONES_BY_CITY={
+  'Bengaluru':[
+    {name:'Koramangala',lat:12.9352,lng:77.6245,demand:'high',rate:168,cluster:1,peak:'7–10 PM',shifts:8,trend:'+12%',color:'#16A34A'},
+    {name:'Indiranagar',lat:12.9784,lng:77.6408,demand:'high',rate:158,cluster:1,peak:'7–9 PM',shifts:6,trend:'+8%',color:'#16A34A'},
+    {name:'HSR Layout',lat:12.9116,lng:77.6474,demand:'high',rate:152,cluster:1,peak:'12–3 PM',shifts:5,trend:'+18%',color:'#16A34A'},
+    {name:'MG Road',lat:12.9757,lng:77.6011,demand:'med',rate:134,cluster:2,peak:'12–2 PM',shifts:4,trend:'+3%',color:'#D97706'},
+    {name:'JP Nagar',lat:12.9077,lng:77.5832,demand:'med',rate:128,cluster:2,peak:'6–9 PM',shifts:3,trend:'-2%',color:'#D97706'},
+    {name:'Marathahalli',lat:12.9591,lng:77.6974,demand:'med',rate:122,cluster:3,peak:'8–11 AM',shifts:3,trend:'+5%',color:'#D97706'},
+    {name:'Whitefield',lat:12.9698,lng:77.7500,demand:'low',rate:98,cluster:4,peak:'7–9 PM',shifts:2,trend:'-8%',color:'#DC2626'},
+    {name:'Electronic City',lat:12.8399,lng:77.6770,demand:'low',rate:105,cluster:4,peak:'5–8 PM',shifts:2,trend:'-5%',color:'#DC2626'},
+  ],
+  'Coimbatore':[
+    {name:'RS Puram',lat:11.0050,lng:76.9598,demand:'high',rate:155,cluster:1,peak:'12–2 PM',shifts:7,trend:'+14%',color:'#16A34A'},
+    {name:'Gandhipuram',lat:11.0168,lng:76.9558,demand:'high',rate:148,cluster:1,peak:'12–2 PM & 7–9 PM',shifts:6,trend:'+9%',color:'#16A34A'},
+    {name:'Peelamedu',lat:11.0262,lng:77.0046,demand:'high',rate:142,cluster:1,peak:'7–9 PM',shifts:5,trend:'+11%',color:'#16A34A'},
+    {name:'Saibaba Colony',lat:11.0175,lng:76.9680,demand:'med',rate:128,cluster:2,peak:'1–3 PM',shifts:4,trend:'+5%',color:'#D97706'},
+    {name:'Singanallur',lat:10.9954,lng:77.0135,demand:'med',rate:120,cluster:2,peak:'6–8 PM',shifts:3,trend:'+3%',color:'#D97706'},
+    {name:'Hopes College',lat:11.0380,lng:76.9810,demand:'med',rate:118,cluster:2,peak:'8–10 AM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'Ukkadam',lat:10.9905,lng:76.9690,demand:'low',rate:95,cluster:3,peak:'5–7 PM',shifts:2,trend:'-4%',color:'#DC2626'},
+    {name:'Ganapathy',lat:11.0300,lng:76.9500,demand:'low',rate:102,cluster:3,peak:'7–9 PM',shifts:2,trend:'-3%',color:'#DC2626'},
+  ],
+  'Chennai':[
+    {name:'Anna Nagar',lat:13.0850,lng:80.2101,demand:'high',rate:162,cluster:1,peak:'12–3 PM',shifts:7,trend:'+10%',color:'#16A34A'},
+    {name:'T Nagar',lat:13.0418,lng:80.2341,demand:'high',rate:155,cluster:1,peak:'12–2 PM',shifts:6,trend:'+7%',color:'#16A34A'},
+    {name:'Adyar',lat:13.0012,lng:80.2565,demand:'high',rate:148,cluster:1,peak:'7–9 PM',shifts:5,trend:'+8%',color:'#16A34A'},
+    {name:'Velachery',lat:12.9815,lng:80.2180,demand:'med',rate:130,cluster:2,peak:'6–9 PM',shifts:4,trend:'+4%',color:'#D97706'},
+    {name:'Tambaram',lat:12.9249,lng:80.1000,demand:'med',rate:118,cluster:2,peak:'8–10 AM',shifts:3,trend:'-1%',color:'#D97706'},
+    {name:'Porur',lat:13.0350,lng:80.1570,demand:'low',rate:100,cluster:3,peak:'5–7 PM',shifts:2,trend:'-6%',color:'#DC2626'},
+  ],
+  'Hyderabad':[
+    {name:'Banjara Hills',lat:17.4156,lng:78.4347,demand:'high',rate:165,cluster:1,peak:'7–9 PM',shifts:7,trend:'+11%',color:'#16A34A'},
+    {name:'Jubilee Hills',lat:17.4322,lng:78.4072,demand:'high',rate:158,cluster:1,peak:'7–10 PM',shifts:6,trend:'+9%',color:'#16A34A'},
+    {name:'HITEC City',lat:17.4475,lng:78.3762,demand:'high',rate:152,cluster:1,peak:'12–2 PM',shifts:5,trend:'+13%',color:'#16A34A'},
+    {name:'Gachibowli',lat:17.4401,lng:78.3489,demand:'med',rate:135,cluster:2,peak:'12–3 PM',shifts:4,trend:'+5%',color:'#D97706'},
+    {name:'Kukatpally',lat:17.4849,lng:78.3996,demand:'med',rate:122,cluster:2,peak:'6–8 PM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'LB Nagar',lat:17.3528,lng:78.5504,demand:'low',rate:98,cluster:3,peak:'5–7 PM',shifts:2,trend:'-5%',color:'#DC2626'},
+  ],
+  'Mumbai':[
+    {name:'Andheri',lat:19.1136,lng:72.8697,demand:'high',rate:172,cluster:1,peak:'12–2 PM & 7–10 PM',shifts:8,trend:'+12%',color:'#16A34A'},
+    {name:'Bandra',lat:19.0596,lng:72.8295,demand:'high',rate:165,cluster:1,peak:'7–10 PM',shifts:7,trend:'+9%',color:'#16A34A'},
+    {name:'Powai',lat:19.1197,lng:72.9051,demand:'high',rate:158,cluster:1,peak:'12–3 PM',shifts:6,trend:'+14%',color:'#16A34A'},
+    {name:'Malad',lat:19.1864,lng:72.8484,demand:'med',rate:138,cluster:2,peak:'6–9 PM',shifts:4,trend:'+4%',color:'#D97706'},
+    {name:'Thane',lat:19.2183,lng:72.9781,demand:'med',rate:125,cluster:2,peak:'8–10 AM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'Navi Mumbai',lat:19.0330,lng:73.0297,demand:'low',rate:105,cluster:3,peak:'5–7 PM',shifts:2,trend:'-3%',color:'#DC2626'},
+  ],
+  'Delhi':[
+    {name:'Connaught Place',lat:28.6330,lng:77.2194,demand:'high',rate:170,cluster:1,peak:'8–10 PM',shifts:8,trend:'+14%',color:'#16A34A'},
+    {name:'Lajpat Nagar',lat:28.5706,lng:77.2433,demand:'high',rate:160,cluster:1,peak:'7–9 PM',shifts:7,trend:'+10%',color:'#16A34A'},
+    {name:'Saket',lat:28.5244,lng:77.2066,demand:'high',rate:155,cluster:1,peak:'7–10 PM',shifts:6,trend:'+8%',color:'#16A34A'},
+    {name:'Rohini',lat:28.7041,lng:77.1025,demand:'med',rate:132,cluster:2,peak:'6–9 PM',shifts:4,trend:'+3%',color:'#D97706'},
+    {name:'Dwarka',lat:28.5921,lng:77.0460,demand:'med',rate:125,cluster:2,peak:'8–10 AM',shifts:3,trend:'+1%',color:'#D97706'},
+    {name:'Noida Sector 18',lat:28.5697,lng:77.3218,demand:'low',rate:108,cluster:3,peak:'5–7 PM',shifts:2,trend:'-4%',color:'#DC2626'},
+  ],
+  'Pune':[
+    {name:'Koregaon Park',lat:18.5362,lng:73.8930,demand:'high',rate:162,cluster:1,peak:'7–10 PM',shifts:7,trend:'+11%',color:'#16A34A'},
+    {name:'Hinjewadi',lat:18.5904,lng:73.7399,demand:'high',rate:155,cluster:1,peak:'12–2 PM',shifts:6,trend:'+9%',color:'#16A34A'},
+    {name:'Viman Nagar',lat:18.5679,lng:73.9143,demand:'high',rate:148,cluster:1,peak:'7–9 PM',shifts:5,trend:'+12%',color:'#16A34A'},
+    {name:'Kothrud',lat:18.5074,lng:73.8077,demand:'med',rate:130,cluster:2,peak:'6–9 PM',shifts:4,trend:'+4%',color:'#D97706'},
+    {name:'Hadapsar',lat:18.5089,lng:73.9259,demand:'med',rate:118,cluster:2,peak:'8–10 AM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'Camp',lat:18.5195,lng:73.8753,demand:'low',rate:102,cluster:3,peak:'5–7 PM',shifts:2,trend:'-5%',color:'#DC2626'},
+  ],
+  'Kolkata':[
+    {name:'Park Street',lat:22.5519,lng:88.3527,demand:'high',rate:158,cluster:1,peak:'6–9 PM',shifts:7,trend:'+10%',color:'#16A34A'},
+    {name:'Salt Lake',lat:22.5855,lng:88.4297,demand:'high',rate:150,cluster:1,peak:'6–8 PM',shifts:6,trend:'+8%',color:'#16A34A'},
+    {name:'New Town',lat:22.5868,lng:88.4756,demand:'high',rate:145,cluster:1,peak:'7–9 PM',shifts:5,trend:'+9%',color:'#16A34A'},
+    {name:'Gariahat',lat:22.5174,lng:88.3686,demand:'med',rate:128,cluster:2,peak:'6–8 PM',shifts:4,trend:'+3%',color:'#D97706'},
+    {name:'Tollygunge',lat:22.4947,lng:88.3424,demand:'med',rate:118,cluster:2,peak:'5–8 PM',shifts:3,trend:'+1%',color:'#D97706'},
+    {name:'Howrah',lat:22.5958,lng:88.2636,demand:'low',rate:98,cluster:3,peak:'5–7 PM',shifts:2,trend:'-4%',color:'#DC2626'},
+  ],
+  'Ahmedabad':[
+    {name:'Navrangpura',lat:23.0395,lng:72.5603,demand:'high',rate:155,cluster:1,peak:'12–2 PM',shifts:7,trend:'+10%',color:'#16A34A'},
+    {name:'Satellite',lat:23.0300,lng:72.5200,demand:'high',rate:148,cluster:1,peak:'12–2 PM',shifts:6,trend:'+8%',color:'#16A34A'},
+    {name:'Vastrapur',lat:23.0329,lng:72.5340,demand:'high',rate:142,cluster:1,peak:'7–9 PM',shifts:5,trend:'+7%',color:'#16A34A'},
+    {name:'Bopal',lat:23.0335,lng:72.4667,demand:'med',rate:125,cluster:2,peak:'12–2 PM',shifts:4,trend:'+4%',color:'#D97706'},
+    {name:'Maninagar',lat:22.9945,lng:72.6060,demand:'med',rate:115,cluster:2,peak:'6–8 PM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'Naroda',lat:23.0878,lng:72.6369,demand:'low',rate:96,cluster:3,peak:'5–7 PM',shifts:2,trend:'-3%',color:'#DC2626'},
+  ],
+  'Jaipur':[
+    {name:'MI Road',lat:26.9124,lng:75.7873,demand:'high',rate:152,cluster:1,peak:'7–9 PM',shifts:7,trend:'+9%',color:'#16A34A'},
+    {name:'Vaishali Nagar',lat:26.9281,lng:75.7380,demand:'high',rate:145,cluster:1,peak:'7–9 PM',shifts:6,trend:'+7%',color:'#16A34A'},
+    {name:'Malviya Nagar',lat:26.8574,lng:75.8070,demand:'high',rate:138,cluster:1,peak:'7–9 PM',shifts:5,trend:'+8%',color:'#16A34A'},
+    {name:'Mansarovar',lat:26.8617,lng:75.7601,demand:'med',rate:122,cluster:2,peak:'12–2 PM',shifts:4,trend:'+3%',color:'#D97706'},
+    {name:'C-Scheme',lat:26.9115,lng:75.8012,demand:'med',rate:118,cluster:2,peak:'7–9 PM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'Tonk Road',lat:26.8567,lng:75.8069,demand:'low',rate:95,cluster:3,peak:'5–7 PM',shifts:2,trend:'-4%',color:'#DC2626'},
+  ],
+  'Kochi':[
+    {name:'Edapally',lat:10.0269,lng:76.3084,demand:'high',rate:155,cluster:1,peak:'6–9 PM',shifts:7,trend:'+10%',color:'#16A34A'},
+    {name:'MG Road',lat:9.9816,lng:76.2999,demand:'high',rate:148,cluster:1,peak:'6–9 PM',shifts:6,trend:'+8%',color:'#16A34A'},
+    {name:'Kakkanad',lat:10.0159,lng:76.3419,demand:'high',rate:142,cluster:1,peak:'7–9 PM',shifts:5,trend:'+9%',color:'#16A34A'},
+    {name:'Aluva',lat:10.1075,lng:76.3518,demand:'med',rate:125,cluster:2,peak:'12–2 PM',shifts:4,trend:'+4%',color:'#D97706'},
+    {name:'Tripunithura',lat:9.9453,lng:76.3511,demand:'med',rate:115,cluster:2,peak:'6–8 PM',shifts:3,trend:'+2%',color:'#D97706'},
+    {name:'Vytilla',lat:9.9705,lng:76.3218,demand:'low',rate:98,cluster:3,peak:'5–7 PM',shifts:2,trend:'-3%',color:'#DC2626'},
+  ],
+};
+
+// Default centres per city
+const CITY_CENTER={
+  'Bengaluru':[12.9352,77.6245,12],
+  'Coimbatore':[11.0150,76.9700,13],
+  'Chennai':[13.0418,80.2341,12],
+  'Hyderabad':[17.4322,78.4072,12],
+  'Mumbai':[19.0760,72.8777,12],
+  'Delhi':[28.6139,77.2090,11],
+  'Pune':[18.5204,73.8567,12],
+  'Kolkata':[22.5726,88.3639,12],
+  'Ahmedabad':[23.0225,72.5714,12],
+  'Jaipur':[26.9124,75.7873,12],
+  'Kochi':[9.9312,76.2673,12],
+};
+
+// Active zones for this session — loaded from API
+let ZONES=[];
+let currentCity=Object.keys(ZONES_BY_CITY)[0]||'';
+
+let map,markers=[],circles=[],activeFilter='all',selectedZone=null;
+
+// ── API helpers ──────────────────────────────────────────────────
+const API=window.SS_CONFIG.API;
+function token(){return localStorage.getItem('ss_token');}
+async function apiFetch(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(token())opts.headers['Authorization']='Bearer '+token();
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'API error');
+  return data;
+}
+if(!token()){location.href='index.html';}
+
+// Map API zone object to internal zone format with color, lat/lng fallback
+function mapApiZone(z, fallbackZones) {
+  const demand = z.demand === 'med' ? 'med' : (z.demand || 'med');
+  const color = demand === 'high' ? '#16A34A' : demand === 'low' ? '#DC2626' : '#D97706';
+  const demandClass = demand === 'high' ? 'demand-high' : demand === 'low' ? 'demand-low' : 'demand-med';
+  // Try to get lat/lng from fallback data
+  const fbCity = ZONES_BY_CITY[currentCity] || [];
+  const fb = fbCity.find(f => f.name === z.zone) || null;
+  const lat = z.lat || (fb && fb.lat) || null;
+  const lng = z.lng || (fb && fb.lng) || null;
+  const dataBadge = z.data_source === 'historical'
+    ? '<span style="font-size:9px;background:var(--primary-l);color:var(--primary-d);border:1px solid var(--primary-m);padding:1px 5px;border-radius:3px;margin-left:4px;">📊 Your data</span>'
+    : '<span style="font-size:9px;background:var(--bg);color:var(--ink-3);border:1px solid var(--border);padding:1px 5px;border-radius:3px;margin-left:4px;">📋 Avg data</span>';
+  return {
+    name: z.zone,
+    city: z.city || currentCity,
+    lat, lng,
+    demand,
+    demandClass,
+    color,
+    rate: z.expected_rate || 0,
+    recommendation_score: z.recommendation_score || 0,
+    shift_count: z.shift_count || 0,
+    rank: z.rank || 0,
+    data_source: z.data_source || 'master',
+    dataBadge,
+  };
+}
+
+async function init(){
+  // Read logged-in user from localStorage first for instant city resolution
+  try{
+    const stored=localStorage.getItem('ss_user');
+    if(stored){
+      const su=JSON.parse(stored);
+      if(su && su.city) currentCity=su.city;
+    }
+  }catch(_){}
+  try{
+    const u=await apiFetch('GET','/auth/me');
+    document.getElementById('user-av').textContent=(u.name||'R').charAt(0).toUpperCase();
+    document.getElementById('chip-name').textContent=(u.name||'Rider').split(' ')[0];
+    currentCity=u.city||currentCity||Object.keys(ZONES_BY_CITY)[0]||'';
+    // Update city label
+    const topbar=document.querySelector('.map-topbar');
+    if(topbar) topbar.childNodes[0].textContent=currentCity+' · ';
+}catch(e){
+    if(e.message&&(e.message.includes('401')||e.message.toLowerCase().includes('unauthorized')||e.message.toLowerCase().includes('invalid token'))){
+      location.href='index.html';return;
+    }
+    const cached=localStorage.getItem('ss_user');
+    if(cached){try{const u=JSON.parse(cached);const av=document.getElementById('user-av');const cn=document.getElementById('chip-name');if(av)av.textContent=(u.name||'R').charAt(0).toUpperCase();if(cn)cn.textContent=(u.name||'Rider').split(' ')[0];}catch(_){}}
+  }
+  if(localStorage.getItem('ss_dark')==='1')document.body.classList.add('dark');
+  initMap();
+  // Fetch zones from API filtered by city
+  await loadZonesFromAPI();
+}
+
+async function loadZonesFromAPI(){
+  const hod = new Date().getHours();
+  try {
+    // Also fetch v1 zones filtered by city for map rendering
+    if(currentCity){
+      fetch(`${window.SS_CONFIG.API}/zones?city=${encodeURIComponent(currentCity)}`, {
+        headers: { 'Authorization': 'Bearer ' + token() }
+      }).catch(()=>{});
+    }
+    const resp = await fetch(`${window.SS_CONFIG.API_V2}/analytics/zones?hour_of_day=${hod}`, {
+      headers: { 'Authorization': 'Bearer ' + token() }
+    });
+    if (!resp.ok) throw new Error('API error');
+    const data = await resp.json();
+    const rankings = data.rankings || [];
+    if (rankings.length === 0) {
+      showEmptyState();
+      return;
+    }
+    // Map API zones (already sorted by recommendation_score desc)
+    ZONES = rankings.map(z => mapApiZone(z));
+    // Add map markers
+    markers.forEach(({marker})=>marker.remove());
+    circles.forEach(({circle})=>circle.remove());
+    markers=[];circles=[];
+    ZONES.forEach(z=>{ if(z.lat && z.lng) addZoneToMap(z); });
+    renderZoneList();
+    document.getElementById('zone-count').textContent=ZONES.length+' zones';
+  } catch(e) {
+    // Fall back to static data — clearly mark as estimated, hide fake shift counts and trends
+    const fallback = ZONES_BY_CITY[currentCity]||ZONES_BY_CITY[Object.keys(ZONES_BY_CITY)[0]]||[];
+    ZONES = fallback.map(z => ({...z, recommendation_score: z.rate, shift_count: null, trend: null, data_source: 'master',
+      timeSlot: peakToTimeSlot(z.peak || ''),
+      demandClass: z.demand==='high'?'demand-high':z.demand==='low'?'demand-low':'demand-med',
+      dataBadge: '<span style="font-size:9px;background:var(--bg);color:var(--ink-3);border:1px solid var(--border);padding:1px 5px;border-radius:3px;margin-left:4px;">📋 Estimated</span>'}));
+    ZONES.forEach(z=>{ if(z.lat && z.lng) addZoneToMap(z); });
+    renderZoneList();
+  }
+}
+
+function showEmptyState(){
+  document.getElementById('zone-list').innerHTML =
+    '<div style="padding:24px;text-align:center;color:var(--ink-3);font-size:13px;">No zone data available</div>';
+}
+
+function initMap(){
+  const center=CITY_CENTER[currentCity]||[12.9352,77.6245,12];
+  map=L.map('map',{zoomControl:true,attributionControl:false}).setView([center[0],center[1]],center[2]);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18}).addTo(map);
+  L.control.attribution({prefix:'© OpenStreetMap'}).addTo(map);
+}
+
+function addZoneToMap(z){
+  const demandColor = z.demand === 'high' ? '#16A34A' : z.demand === 'low' ? '#DC2626' : '#D97706';
+  // Heatmap circle
+  const circle=L.circle([z.lat,z.lng],{
+    color:demandColor,fillColor:demandColor,fillOpacity:0.15,weight:1.5,
+    radius:z.demand==='high'?900:z.demand==='med'?700:500
+  }).addTo(map);
+  circles.push({circle,zone:z});
+
+  // Pin marker
+  const icon=L.divIcon({
+    className:'',
+    html:`<div style="width:32px;height:32px;background:${demandColor};border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.25);cursor:pointer;font-size:10px;font-weight:700;color:white">₹${Math.round(z.rate/10)*10}</div>`,
+    iconSize:[32,32],iconAnchor:[16,16]
+  });
+  const marker=L.marker([z.lat,z.lng],{icon}).addTo(map);
+  marker.on('click',()=>showZoneDetail(z));
+  markers.push({marker,zone:z});
+}
+
+function renderZoneList(){
+  // API already returns sorted by recommendation_score desc; render in order
+  const list = ZONES.length ? ZONES : [];
+  if (!list.length) { showEmptyState(); return; }
+
+  document.getElementById('zone-count').textContent=list.length+' zones';
+  document.getElementById('zone-list').innerHTML=list.map(z=>{
+    const demandClass = z.demandClass || (z.demand==='high'?'demand-high':z.demand==='low'?'demand-low':'demand-med');
+    const shiftInfo = z.shift_count > 0 ? `${z.shift_count} of your shifts` : 'No history';
+    const badge = z.dataBadge || '';
+    return `
+    <div class="zone-card${selectedZone===z.name?' active':''}" onclick="showZoneDetail(${JSON.stringify(z).replace(/"/g,"'")})">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="zone-name">${z.name}${badge}</div>
+        <span class="zone-demand ${demandClass}">${z.demand}</span>
+      </div>
+      <div class="zone-meta">${shiftInfo}</div>
+      <div class="zone-earn">₹${Math.round(z.rate)}/hr</div>
+    </div>`;
+  }).join('');
+}
+
+function showZoneDetail(z){
+  if(typeof z==='string')z=JSON.parse(z.replace(/'/g,'"'));
+  selectedZone=z.name;
+  if(z.lat && z.lng) map.flyTo([z.lat,z.lng],14,{duration:0.8});
+  document.getElementById('zd-name').textContent=z.name;
+  document.getElementById('zd-rate').textContent='₹'+Math.round(z.rate)+'/hr';
+  document.getElementById('zd-cluster').textContent=z.demand==='high'?'Top Earner':z.demand==='med'?'Mid Earner':'Low Earner';
+  document.getElementById('zd-peak').textContent=z.peak||'—';
+  document.getElementById('zd-shifts').textContent=(z.shift_count||z.shifts||0)+' shifts';
+  document.getElementById('zd-trend').textContent=z.trend?((z.trend.startsWith('+')?'↑ ':'↓ ')+z.trend+' this week'):'—';
+  document.getElementById('zone-detail').classList.add('show');
+  renderZoneList();
+}
+
+function peakToTimeSlot(peak) {
+  if (!peak) return 'all';
+  const p = peak.toLowerCase();
+  // Morning: has AM indicator and no PM
+  if (/\d+\s?am/.test(p) && !/pm/.test(p)) return 'morning';
+  // Lunch / afternoon: 12pm, 1pm, 2pm, 3pm, 4pm, 5pm
+  if (/12|1\s?pm|2\s?pm|3\s?pm|4\s?pm|5\s?pm|12[–\-]|1[–\-]2/.test(p)) return 'afternoon';
+  // Evening / night: 6pm onward
+  if (/6\s?pm|7\s?pm|8\s?pm|9\s?pm|10\s?pm|6[–\-]|7[–\-]|8[–\-]|9[–\-]|10[–\-]/.test(p)) return 'evening';
+  return 'all';
+}
+
+
+function filterZones(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('map-time-label').textContent=f==='all'?'All day':f.charAt(0).toUpperCase()+f.slice(1);
+  // Map filter label to representative hour_of_day for the backend
+  const hourMap = {all: new Date().getHours(), morning: 9, afternoon: 14, evening: 19, night: 22};
+  const hod = hourMap[f] !== undefined ? hourMap[f] : new Date().getHours();
+  window.fetchV2(`/analytics/zones?hour_of_day=${hod}`).then(data => {
+    if (data && data.rankings && data.rankings.length) {
+      markers.forEach(({marker})=>marker.remove());
+      circles.forEach(({circle})=>circle.remove());
+      markers=[];circles=[];
+      ZONES = data.rankings.map(z=>mapApiZone(z));
+      ZONES.forEach(z=>{ if(z.lat && z.lng) addZoneToMap(z); });
+      renderZoneList();
+    }
+  }).catch(()=>{
+    // API unavailable — filter static data by time slot
+    if (f === 'all') {
+      renderZoneList();
+    } else {
+      const filtered = ZONES.filter(z => {
+        const slot = peakToTimeSlot(z.peak || '');
+        return slot === f || slot === 'all';
+      });
+      const allZones = ZONES;
+      ZONES = filtered.length ? filtered : allZones;
+      renderZoneList();
+      ZONES = allZones;
+    }
+  });
+}
+
+function signOut(){localStorage.removeItem("ss_token");localStorage.removeItem("ss_user");window.location.href="index.html";}
+init();
+</script>
+</body>
+</html>

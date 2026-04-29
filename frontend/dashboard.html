@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShiftSense — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.win-stack { display:flex; flex-direction:column; gap:10px; }
+.cmp-grid { display:grid; grid-template-columns:1fr 1px 1fr; gap:16px; margin-bottom:14px; align-items:center; }
+.cmp-div  { background:var(--border); height:60px; }
+.cmp-blk  { text-align:center; }
+.cmp-per  { font-size:10px; color:var(--ink-4); text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin-bottom:5px; }
+.cmp-val  { font-size:26px; font-weight:800; letter-spacing:-1px; }
+.cmp-val.cur { color:var(--primary); }
+.cmp-val.prv { color:var(--ink-4); }
+.cmp-sub  { font-size:11px; color:var(--ink-3); margin-top:3px; }
+.cmp-badge{ display:block; text-align:center; font-size:12px; font-weight:600; padding:5px 12px; border-radius:100px; margin-bottom:14px; }
+.cmp-badge.up   { background:var(--green-l); color:var(--green-t); }
+.cmp-badge.down { background:var(--red-l);   color:var(--red-t); }
+.peak-grid { display:flex; flex-direction:column; gap:10px; }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-logo"><img src="logo.png" style="width:22px;height:22px;object-fit:contain;border-radius:5px;" alt="ShiftSense"></div>
+    <button class="nav-btn active" title="Dashboard" onclick="location.href='dashboard.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+    <button class="nav-btn" title="Shifts" onclick="location.href='shifts.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></button>
+    <button class="nav-btn" title="Zones" onclick="location.href='zones.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+    <button class="nav-btn" title="Analytics" onclick="location.href='analytics.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></button>
+    <button class="nav-btn" title="History" onclick="location.href='history.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+    <button class="nav-btn" title="Predict &amp; Model" onclick="location.href='predict.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+    <div class="sb-bottom">
+      <button class="nav-btn" title="Toggle Dark Mode" onclick="toggleDark()" id="dark-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      <button class="nav-btn" title="Sign Out" onclick="signOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="tb-title">
+        <h1 id="greeting">Good morning, Rider 👋</h1>
+        <p id="tb-date">Loading…</p>
+      </div>
+      <div class="tb-right">
+        <span class="wtag sunny" id="weather-tag">☀️ Clear</span>
+        <button class="icon-btn" id="rain-toggle" title="Toggle rain mode" onclick="toggleRain()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 17.58A5 5 0 0018 8h-1.26A8 8 0 104 16.25"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="16" y1="13" x2="16" y2="15"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
+        </button>
+        <div class="profile-chip" onclick="location.href='index.html'">
+          <div class="avatar" id="user-av">R</div>
+          <div><div class="chip-name" id="chip-name">Rider</div><div class="chip-sub" id="chip-plat">Loading...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Banners -->
+      <div id="anomaly-wrap" style="display:none">
+        <div class="banner warn">
+          <span class="banner-ico">⚠️</span>
+          <div><div class="banner-head">Earnings lower than usual</div><div class="banner-sub">Your earnings are lower than usual · Consider switching to a high-demand zone</div></div>
+          <button class="banner-x" onclick="document.getElementById('anomaly-wrap').style.display='none'">✕</button>
+        </div>
+      </div>
+      <div id="rain-banner" style="display:none">
+        <div class="banner rain">
+          <span class="banner-ico">🌧️</span>
+          <div><div class="banner-head">Rain mode active — surge pricing applied</div><div class="banner-sub">All earnings estimates adjusted +20% · Stay safe!</div></div>
+          <button class="banner-x" onclick="document.getElementById('rain-banner').style.display='none'">✕</button>
+        </div>
+      </div>
+      <div class="banner info" id="surge-banner">
+        <span class="banner-ico">🔥</span>
+        <div><div class="banner-head">Evening surge starting in <span id="surge-zone-name">your top zone</span></div><div class="banner-sub">Demand up 42% · Best time to head out now</div></div>
+        <button class="banner-x" onclick="this.parentElement.style.display='none'">✕</button>
+      </div>
+
+      <!-- KPIs -->
+      <p class="sec-label">Today's Overview</p>
+      <div class="g4 mb16" style="margin-bottom:16px">
+        <div class="kpi accent">
+          <div class="kpi-lbl">Today's Forecast</div>
+          <div class="kpi-val" id="kpi-today">—</div>
+          <div class="kpi-sub">Expected earnings</div>
+          <div class="badge flat" id="kpi-today-badge">Loading…</div>
+        </div>
+        <div class="kpi accent">
+          <div class="kpi-lbl">Weekly Target</div>
+          <div class="kpi-val" id="kpi-target">—</div>
+          <div class="kpi-sub" id="kpi-target-sub">₹0 earned so far</div>
+          <div class="prog-wrap mt8">
+            <div class="prog-track"><div class="prog-fill" id="target-bar" style="width:63%"></div></div>
+          </div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Avg ₹ / Hour</div>
+          <div class="kpi-val" id="kpi-rate">—</div>
+          <div class="kpi-sub">This week's rate</div>
+          <div class="badge flat" id="kpi-rate-badge">No data yet</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Surge Index</div>
+          <div class="kpi-val" id="kpi-surge">—</div>
+          <div class="kpi-sub" id="kpi-surge-sub">Log shifts to see</div>
+          <div class="badge flat" id="kpi-surge-badge">No data</div>
+        </div>
+      </div>
+      <div class="g4 mb16" style="margin-bottom:24px">
+        <div class="kpi">
+          <div class="kpi-lbl">Target Probability</div>
+          <div class="kpi-val" id="kpi-prob">—</div>
+          <div class="kpi-sub">Chance of hitting <span id="daily-target-lbl">—</span> today</div>
+          <div class="badge flat">Goal Predictor</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Income Reliability</div>
+          <div class="kpi-val">81% accurate</div>
+          <div class="kpi-sub">High predictability score</div>
+          <div class="badge up">▲ Reliable income</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-lbl">Seasonal Index</div>
+          <div class="kpi-val" id="kpi-seasonal">—</div>
+          <div class="kpi-sub" id="kpi-seasonal-sub">Today vs weekly avg</div>
+          <div class="badge flat">Trend</div>
+        </div>
+        <div class="kpi" style="cursor:pointer" onclick="location.href='predict.html'">
+          <div class="kpi-lbl">Predict &amp; Model →</div>
+          <div class="kpi-val" style="font-size:16px;margin-top:4px">Full Models</div>
+          <div class="kpi-sub">4 smart models working for you</div>
+          <div class="badge flat">Open →</div>
+        </div>
+      </div>
+      </div>
+
+      <!-- Chart + Best Windows -->
+      <p class="sec-label">This Week's Earnings</p>
+      <div class="g-main" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Weekly Earnings Forecast</div><div class="card-sub">Actual earnings + projected earnings for remaining days</div></div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="method-tag">Smart Forecast</span>
+              <span class="wtag sunny" id="chart-wtag">☀️ Normal</span>
+            </div>
+          </div>
+          <div class="chart-bars" id="chart-wrap"></div>
+          <div style="display:flex;gap:12px;margin-top:12px;font-size:10px;color:var(--ink-3)">
+            <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(79,70,229,0.15);border-top:2px solid var(--primary)"></div>Actual</div>
+            <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:rgba(79,70,229,0.07);border-top:2px solid var(--primary-m)"></div>Forecast</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">Best Windows This Week</div><div class="card-sub">Ranked by expected ₹/hr</div></div>
+            <span class="method-tag">Smart Rank</span>
+          </div>
+          <div class="win-stack" id="win-stack"></div>
+        </div>
+      </div>
+
+      <!-- Week compare + Peak hours -->
+      <div class="g-main2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <div><div class="card-title">This Week vs Last Week</div><div class="card-sub">Earnings comparison</div></div>
+            <span class="method-tag">Insights</span>
+          </div>
+          <div class="cmp-grid">
+            <div class="cmp-blk"><div class="cmp-per">This week</div><div class="cmp-val cur" id="cmp-this">—</div><div class="cmp-sub" id="cmp-this-sub">—</div></div>
+            <div class="cmp-div"></div>
+            <div class="cmp-blk"><div class="cmp-per">Last week</div><div class="cmp-val prv" id="cmp-last">—</div><div class="cmp-sub">7 days logged</div></div>
+          </div>
+          <span class="cmp-badge up" id="cmp-badge">▲ ₹250 more than last week (+8.7%)</span>
+          <div class="prog-wrap">
+            <div class="prog-head"><span class="prog-lbl">Target progress</span><span class="prog-pct" id="cmp-pct">63%</span></div>
+            <div class="prog-track"><div class="prog-fill" id="cmp-bar" style="width:63%"></div></div>
+            <div class="prog-note" id="cmp-note">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Peak Hour Forecast</div><div class="card-sub">Expected ₹/hr by time slot</div></div>
+          <div class="peak-grid">
+            <div class="peak-card"><div class="peak-ico morn">🌅</div><div><div class="peak-label">Morning</div><div class="peak-time">8 AM – 11 AM</div><div class="peak-earn" id="peak-morning">Not enough data</div></div></div>
+            <div class="peak-card"><div class="peak-ico noon">☀️</div><div><div class="peak-label">Afternoon</div><div class="peak-time">12 PM – 3 PM</div><div class="peak-earn" id="peak-afternoon">Not enough data</div></div></div>
+            <div class="peak-card"><div class="peak-ico eve">🌆</div><div><div class="peak-label">Evening</div><div class="peak-time">6 PM – 10 PM</div><div class="peak-earn" id="peak-evening">Not enough data</div></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log shift + Recent shifts -->
+      <p class="sec-label">Log & Recent Shifts</p>
+      <div class="g2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Log Today's Shift</div></div>
+          <div class="form-2col">
+            <div class="field">
+              <label class="field-lbl">Zone</label>
+              <select class="sel ni" id="log-zone">
+                <option value="">Select zone</option>
+                <option>HSR Layout</option><option>MG Road</option><option>Marathahalli</option>
+                <option>JP Nagar</option><option>Electronic City</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-lbl">Hours Worked</label>
+              <input class="inp ni" type="number" id="log-hours" placeholder="e.g. 5" min="0.5" max="16" step="0.5">
+            </div>
+          </div>
+          <div class="form-2col">
+            <div class="field">
+              <label class="field-lbl">Earnings (₹)</label>
+              <div class="rupee-wrap"><span class="rupee-pfx">₹</span><input class="inp rupee-inp ni" type="number" id="log-earn" placeholder="780" min="0"></div>
+            </div>
+            <div class="field">
+              <label class="field-lbl">Orders</label>
+              <input class="inp ni" type="number" id="log-orders" placeholder="12" min="0">
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="logShift()">+ Log Shift</button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Recent Shifts</div>
+            <a href="history.html" style="font-size:12px;font-weight:600;color:var(--primary)">View all →</a>
+          </div>
+          <div class="shift-list" id="recent-shifts"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ── API helpers (token stored in localStorage, data in DB) ──────
+const API=window.SS_CONFIG.API;
+function token(){return localStorage.getItem('ss_token');}
+function setToken(t){localStorage.setItem('ss_token',t);}
+function setUser(u){localStorage.setItem('ss_user',JSON.stringify(u));}
+function getUser(){return JSON.parse(localStorage.getItem('ss_user')||'null');}
+async function apiFetch(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(token())opts.headers['Authorization']='Bearer '+token();
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'API error');
+  return data;
+}
+
+// Auth guard
+if(!token()){location.href='index.html';}
+
+// ── City → Zones map ─────────────────────────────────────────────
+const ZONES_BY_CITY={
+  'Bengaluru':['Koramangala','Indiranagar','HSR Layout','Whitefield','Marathahalli','MG Road','JP Nagar','Electronic City','Jayanagar','Bellandur','BTM Layout'],
+  'Coimbatore':['RS Puram','Gandhipuram','Peelamedu','Saibaba Colony','Singanallur','Hopes College','Ukkadam','Ganapathy','Race Course','Tidel Park'],
+  'Chennai':['Anna Nagar','T Nagar','Adyar','Velachery','Tambaram','Porur','Nungambakkam','Mylapore','Guindy','Vadapalani'],
+  'Hyderabad':['Banjara Hills','Jubilee Hills','HITEC City','Gachibowli','Kukatpally','LB Nagar','Secunderabad','Madhapur','Kondapur','Ameerpet'],
+  'Mumbai':['Andheri','Bandra','Powai','Malad','Thane','Navi Mumbai','Borivali','Goregaon','Kurla','Dadar'],
+  'Delhi':['Connaught Place','Lajpat Nagar','Saket','Rohini','Dwarka','Noida Sector 18','Gurgaon Sector 29','Janakpuri','Karol Bagh','Nehru Place'],
+  'Pune':['Koregaon Park','Hinjewadi','Kothrud','Viman Nagar','Hadapsar','Kharadi','Aundh','FC Road','Camp','Pimpri'],
+  'Kolkata':['Park Street','Salt Lake','New Town','Gariahat','Tollygunge','Howrah','Behala','Dumdum','Ballygunge','Alipore'],
+  'Ahmedabad':['Navrangpura','Satellite','Vastrapur','Bopal','Maninagar','Naroda','Chandkheda','SG Road','Prahlad Nagar','Thaltej'],
+  'Jaipur':['MI Road','Vaishali Nagar','Malviya Nagar','Mansarovar','C-Scheme','Tonk Road','Sitapura','Raja Park','Bani Park','Sodala'],
+  'Kochi':['Edapally','MG Road','Kakkanad','Aluva','Tripunithura','Vytilla','Fort Kochi','Kalamassery','Palarivattom','Kaloor'],
+};
+
+// Top zone windows per city (for forecast cards)
+const CITY_WINDOWS={
+  'Bengaluru':[
+    {day:'Today',time:'7–10 PM',zone:'Koramangala',lo:540,hi:620,ciN:650,hiN:780,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'12–3 PM',zone:'HSR Layout',lo:340,hi:420,ciN:420,hiN:510,ci:'76%',rank:2},
+    {day:'Wed',time:'7–9 PM',zone:'Indiranagar',lo:480,hi:570,ciN:580,hiN:690,ci:'72%',rank:3},
+  ],
+  'Coimbatore':[
+    {day:'Today',time:'12–2 PM',zone:'RS Puram',lo:480,hi:560,ciN:580,hiN:680,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'7–9 PM',zone:'Gandhipuram',lo:400,hi:480,ciN:490,hiN:580,ci:'76%',rank:2},
+    {day:'Wed',time:'12–2 PM',zone:'Peelamedu',lo:360,hi:440,ciN:440,hiN:540,ci:'72%',rank:3},
+  ],
+  'Chennai':[
+    {day:'Today',time:'12–3 PM',zone:'Anna Nagar',lo:500,hi:590,ciN:610,hiN:720,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'12–2 PM',zone:'T Nagar',lo:420,hi:500,ciN:510,hiN:610,ci:'76%',rank:2},
+    {day:'Wed',time:'7–9 PM',zone:'Adyar',lo:450,hi:540,ciN:550,hiN:660,ci:'72%',rank:3},
+  ],
+  'Hyderabad':[
+    {day:'Today',time:'7–9 PM',zone:'Banjara Hills',lo:520,hi:610,ciN:630,hiN:750,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'7–10 PM',zone:'Jubilee Hills',lo:480,hi:560,ciN:580,hiN:690,ci:'76%',rank:2},
+    {day:'Wed',time:'12–2 PM',zone:'HITEC City',lo:440,hi:520,ciN:530,hiN:640,ci:'72%',rank:3},
+  ],
+  'Mumbai':[
+    {day:'Today',time:'12–2 PM',zone:'Andheri',lo:560,hi:650,ciN:680,hiN:800,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'7–10 PM',zone:'Bandra',lo:520,hi:610,ciN:630,hiN:750,ci:'76%',rank:2},
+    {day:'Wed',time:'12–3 PM',zone:'Powai',lo:490,hi:580,ciN:590,hiN:710,ci:'72%',rank:3},
+  ],
+  'Delhi':[
+    {day:'Today',time:'8–10 PM',zone:'Connaught Place',lo:540,hi:630,ciN:650,hiN:770,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'7–9 PM',zone:'Lajpat Nagar',lo:460,hi:550,ciN:560,hiN:670,ci:'76%',rank:2},
+    {day:'Wed',time:'8–10 PM',zone:'Saket',lo:480,hi:570,ciN:580,hiN:700,ci:'72%',rank:3},
+  ],
+  'Pune':[
+    {day:'Today',time:'7–10 PM',zone:'Koregaon Park',lo:480,hi:560,ciN:580,hiN:680,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'7–9 PM',zone:'Hinjewadi',lo:400,hi:480,ciN:490,hiN:590,ci:'76%',rank:2},
+    {day:'Wed',time:'7–10 PM',zone:'Viman Nagar',lo:420,hi:500,ciN:510,hiN:620,ci:'72%',rank:3},
+  ],
+  'Kolkata':[
+    {day:'Today',time:'6–9 PM',zone:'Park Street',lo:460,hi:540,ciN:560,hiN:660,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'6–8 PM',zone:'Salt Lake',lo:400,hi:480,ciN:490,hiN:590,ci:'76%',rank:2},
+    {day:'Wed',time:'6–9 PM',zone:'New Town',lo:380,hi:460,ciN:460,hiN:560,ci:'72%',rank:3},
+  ],
+  'Ahmedabad':[
+    {day:'Today',time:'12–2 PM',zone:'Navrangpura',lo:440,hi:520,ciN:540,hiN:640,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'12–2 PM',zone:'Satellite',lo:400,hi:480,ciN:490,hiN:590,ci:'76%',rank:2},
+    {day:'Wed',time:'12–2 PM',zone:'Vastrapur',lo:380,hi:460,ciN:460,hiN:560,ci:'72%',rank:3},
+  ],
+  'Jaipur':[
+    {day:'Today',time:'7–9 PM',zone:'MI Road',lo:420,hi:500,ciN:510,hiN:620,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'7–9 PM',zone:'Vaishali Nagar',lo:380,hi:460,ciN:460,hiN:560,ci:'76%',rank:2},
+    {day:'Wed',time:'7–9 PM',zone:'Malviya Nagar',lo:360,hi:440,ciN:440,hiN:540,ci:'72%',rank:3},
+  ],
+  'Kochi':[
+    {day:'Today',time:'6–9 PM',zone:'Edapally',lo:440,hi:520,ciN:540,hiN:640,ci:'80%',rank:1},
+    {day:'Tomorrow',time:'6–8 PM',zone:'MG Road',lo:400,hi:480,ciN:490,hiN:590,ci:'76%',rank:2},
+    {day:'Wed',time:'6–9 PM',zone:'Kakkanad',lo:380,hi:460,ciN:460,hiN:560,ci:'72%',rank:3},
+  ],
+};
+
+function populateZones(city, apiZones){
+  const sel=document.getElementById('log-zone');
+  if(apiZones && apiZones.length){
+    // Use real zone names from API — store both id and name so logShift can send the name
+    sel.innerHTML='<option value="">Select zone</option>'+apiZones.map(z=>`<option value="${z.name}">${z.name}</option>`).join('');
+  } else {
+    // Static fallback — label them so the user knows these are default suggestions
+    const staticZones=ZONES_BY_CITY[city]||[];
+    if(staticZones.length){
+      sel.innerHTML='<option value="">Select zone (default list)</option>'+staticZones.map(z=>`<option value="${z}">${z}</option>`).join('');
+    } else {
+      sel.innerHTML='<option value="">No zones available — log shifts on Shifts page</option>';
+    }
+  }
+}
+
+
+
+const S={
+  name:'',platform:'',city:'',target:0,
+  isRaining:false,
+  weekEarnings:[null,null,null,null,null,null,null],
+  weekEarningsRain:[null,null,null,null,null,null,null],
+  labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+  todayIndex:new Date().getDay()===0?6:new Date().getDay()-1,
+  prevWeekTotal:0,
+  shifts:[],
+};
+
+async function init(){
+  try{
+    // Load zones dynamically from API for user's city
+    let _apiZones=null;
+    try {
+      const u_tmp=await apiFetch('GET','/auth/me');
+      _apiZones=await apiFetch('GET','/zones?city='+encodeURIComponent(u_tmp.city||''));
+      if(_apiZones&&_apiZones.length){
+        ZONES_BY_CITY[u_tmp.city]=_apiZones.map(z=>z.name);
+      }
+    } catch(e) { /* fall back to static map if API zones unavailable */ }
+    const u=await apiFetch('GET','/auth/me');
+    setUser(u);
+    S.name=u.name||'Rider';
+    S.platform=(u.platforms||[])[0]||'';
+    S.city=u.city||'';
+    S.target=u.target||3000;
+    populateZones(S.city, _apiZones);
+    // Surge banner zone name — defer until shifts are loaded so we use the user's actual top zone
+}catch(e){
+    if(e.message&&(e.message.includes('401')||e.message.toLowerCase().includes('unauthorized')||e.message.toLowerCase().includes('invalid token'))){
+      location.href='index.html';return;
+    }
+    const cached=localStorage.getItem('ss_user');
+    if(cached){try{const u=JSON.parse(cached);const av=document.getElementById('user-av');const cn=document.getElementById('chip-name');if(av)av.textContent=(u.name||'R').charAt(0).toUpperCase();if(cn)cn.textContent=(u.name||'Rider').split(' ')[0];}catch(_){}}
+  }
+
+  // Load shifts from DB
+  try{
+    S.shifts=await apiFetch('GET','/shifts');
+    // Build week earnings from real shift data
+    const dow=new Date().getDay();
+    const weekStart=new Date();weekStart.setDate(weekStart.getDate()-(dow===0?6:dow-1));weekStart.setHours(0,0,0,0);
+    const lastWeekStart=new Date(weekStart);lastWeekStart.setDate(lastWeekStart.getDate()-7);
+    S.weekEarnings=[null,null,null,null,null,null,null];
+    S.prevWeekTotal=0;
+    S.shifts.forEach(s=>{
+      const d=new Date(s.shift_date+'T00:00:00');
+      if(d>=weekStart){
+        const idx=d.getDay()===0?6:d.getDay()-1;
+        S.weekEarnings[idx]=(S.weekEarnings[idx]||0)+s.earn;
+      } else if(d>=lastWeekStart){
+        S.prevWeekTotal+=s.earn;
+      }
+    });
+    S.weekEarningsRain=S.weekEarnings.map(v=>v?Math.round(v*1.2):null);
+    // Set surge banner to user's actual top zone by earnings
+    const szn=document.getElementById('surge-zone-name');
+    if(szn && S.shifts.length){
+      const zoneEarnings={};
+      S.shifts.forEach(s=>{if(s.zone)zoneEarnings[s.zone]=(zoneEarnings[s.zone]||0)+s.earn;});
+      const topZone=Object.entries(zoneEarnings).sort((a,b)=>b[1]-a[1])[0];
+      if(topZone)szn.textContent=topZone[0];
+    }
+  }catch(e){S.shifts=[];}
+
+  const h=new Date().getHours();
+  const g=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('greeting').textContent=g+', '+S.name.split(' ')[0]+' 👋';
+  document.getElementById('tb-date').textContent=new Date().toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('user-av').textContent=S.name.charAt(0).toUpperCase();
+  document.getElementById('chip-name').textContent=S.name.split(' ')[0];
+  document.getElementById('chip-plat').textContent=S.platform;
+  if(localStorage.getItem('ss_dark')==='1'){document.body.classList.add('dark');document.getElementById('dark-btn').querySelector('svg').innerHTML='<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';}
+  setTimeout(()=>{document.getElementById('anomaly-wrap').style.display='block';},2000);
+  renderKPIs(); renderChart(); renderWeekCompare(); renderWindows(); renderRecentShifts();
+  // Fetch V2 forecast to populate real peak hour rates by time-of-day slot
+  try {
+    const forecastData = await window.fetchV2('/analytics/forecast');
+    if (forecastData && forecastData.forecasts && forecastData.forecasts.length) {
+      renderPeakWindowsFromForecast(forecastData.forecasts);
+    } else {
+      renderPeakWindowsFallback();
+    }
+  } catch(e) { renderPeakWindowsFallback(); }
+}
+
+function renderPeakWindowsFromForecast(forecasts) {
+  // Map day-of-week forecasts to morning/afternoon/evening slots by averaging
+  // forecasts is array of {day, forecast, seasonal_index}
+  // We use forecast value as a daily earnings proxy and scale by typical hour fractions
+  const dayMap = {Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6};
+  const values = forecasts.map(f => f.forecast || 0).filter(v => v > 0);
+  if (!values.length) { renderPeakWindowsFallback(); return; }
+  const avgDaily = values.reduce((a,b) => a+b, 0) / values.length;
+  // Typical hours per slot: morning ~3h, afternoon ~3h, evening ~4h out of ~10h day
+  // Rate = daily_earnings / 10 * slot_factor
+  const baseRate = avgDaily / 10;
+  const r = S.isRaining;
+  const rain = r ? 1.2 : 1;
+  const slots = { morning: baseRate * 0.9, afternoon: baseRate * 1.05, evening: baseRate * 1.25 };
+  const fmt = (rate) => {
+    const lo = Math.round(rate * 0.85 * rain);
+    const hi = Math.round(rate * 1.15 * rain);
+    return '₹' + lo.toLocaleString('en-IN') + ' – ₹' + hi.toLocaleString('en-IN') + (r ? ' ☔' : '');
+  };
+  ['morning', 'afternoon', 'evening'].forEach(slot => {
+    const el = document.getElementById('peak-' + slot);
+    if (el) el.textContent = fmt(slots[slot]);
+  });
+}
+
+function renderPeakWindowsFallback() {
+  // Only compute peak windows from real shift timestamps — no multiplier projections
+  if (!S.shifts || !S.shifts.length) {
+    ['morning','afternoon','evening'].forEach(k => {
+      const el = document.getElementById('peak-' + k);
+      if (el) { el.textContent = 'Not enough data'; el.className = 'peak-earn'; }
+    });
+    return;
+  }
+  // Bucket real shifts by time-of-day slot
+  const buckets = { morning: [], afternoon: [], evening: [] };
+  S.shifts.forEach(s => {
+    if (!s.earn || !s.hours) return;
+    const hr = s.start_hour != null ? s.start_hour : (s.shift_date ? new Date(s.shift_date + 'T00:00:00').getHours() : null);
+    const rate = s.earn / s.hours;
+    if (hr === null) return;
+    if (hr >= 6 && hr < 12) buckets.morning.push(rate);
+    else if (hr >= 12 && hr < 17) buckets.afternoon.push(rate);
+    else if (hr >= 17 && hr < 23) buckets.evening.push(rate);
+  });
+  ['morning','afternoon','evening'].forEach(k => {
+    const el = document.getElementById('peak-' + k);
+    if (!el) return;
+    const rates = buckets[k];
+    if (!rates.length) { el.textContent = 'Not enough data'; el.className = 'peak-earn'; return; }
+    const avg = Math.round(rates.reduce((a,b)=>a+b,0)/rates.length);
+    const mn = Math.round(Math.min(...rates)), mx = Math.round(Math.max(...rates));
+    el.textContent = mn === mx ? '₹' + avg + '/hr' : '₹' + mn + ' – ₹' + mx + '/hr';
+    el.className = 'peak-earn' + (S.isRaining ? ' rain' : '');
+  });
+}
+
+function weekTotal(){return(S.isRaining?S.weekEarningsRain:S.weekEarnings).filter(Boolean).reduce((a,b)=>a+b,0);}
+
+function renderKPIs(){
+  // Seasonal index for today — compute from actual shift data by day-of-week
+  const dayNames=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const dayTotals=[0,0,0,0,0,0,0];
+  const dayCounts=[0,0,0,0,0,0,0];
+  S.shifts.forEach(s=>{
+    if(!s.earn||!s.shift_date)return;
+    const d=new Date(s.shift_date+'T00:00:00');
+    const idx=d.getDay()===0?6:d.getDay()-1;
+    dayTotals[idx]+=s.earn;
+    dayCounts[idx]++;
+  });
+  // Compute day averages (use fallback if no data for a day)
+  const fallbackAvgs=[0,0,0,0,0,0,0]; // no data yet
+  const computedDayAvgs=dayTotals.map((t,i)=>dayCounts[i]>0?Math.round(t/dayCounts[i]):fallbackAvgs[i]);
+  S.computedDayAvgs=computedDayAvgs;
+  const overallAvg=computedDayAvgs.reduce((a,b)=>a+b,0)/computedDayAvgs.length;
+  const todayDowSI=new Date().getDay();
+  const seasonalIdx=todayDowSI===0?6:todayDowSI-1;
+  const sIdx=overallAvg>0?(computedDayAvgs[seasonalIdx]/overallAvg).toFixed(2):null;
+  const elSI=document.getElementById('kpi-seasonal');
+  const elSS=document.getElementById('kpi-seasonal-sub');
+  if(elSI)elSI.textContent=sIdx!==null?sIdx+'×':'—';
+  if(elSS)elSS.textContent=sIdx!==null?`${dayNames[seasonalIdx]} · ${parseFloat(sIdx)>=1?'Above':'Below'} average`:'Log shifts to see';
+
+  const r=S.isRaining;
+
+  // Compute real avg ₹/hr from actual shift data — null if no data
+  const allShifts=S.shifts.filter(s=>s.earn>0&&s.hours>0);
+  const avgRate=allShifts.length
+    ?Math.round(allShifts.reduce((a,s)=>a+s.earn/s.hours,0)/allShifts.length)
+    :null;
+  const rainRate=avgRate!==null?Math.round(avgRate*1.2):null;
+  const effectiveRate=r?rainRate:avgRate;
+
+  // Today's forecast only when we have real data
+  const typicalHours=allShifts.length
+    ?parseFloat((allShifts.reduce((a,s)=>a+s.hours,0)/allShifts.length).toFixed(1))
+    :null;
+  const todayForecast=(effectiveRate!==null&&typicalHours!==null)?Math.round(effectiveRate*typicalHours):null;
+
+  // Yesterday's earnings (from shifts data)
+  const yesterday=new Date();yesterday.setDate(yesterday.getDate()-1);
+  const yStr=yesterday.toISOString().slice(0,10);
+  const yEarned=S.shifts.filter(s=>s.shift_date===yStr).reduce((a,s)=>a+s.earn,0);
+  const todayVsYest=(todayForecast!==null&&yEarned>0)?Math.round(((todayForecast-yEarned)/yEarned)*100):null;
+
+  document.getElementById('kpi-today').textContent=todayForecast!==null?'₹'+todayForecast.toLocaleString('en-IN'):'—';
+  document.getElementById('kpi-today-badge').textContent=(r&&effectiveRate)?'▲ Rain surge active':(todayVsYest!==null?(todayVsYest>=0?'▲ +'+todayVsYest+'% vs yesterday':'▼ '+Math.abs(todayVsYest)+'% vs yesterday'):(allShifts.length?'Based on your avg rate':'Log shifts to forecast'));
+  document.getElementById('kpi-rate').textContent=effectiveRate!==null?'₹'+effectiveRate:'—';
+  // Compare to last week's avg rate
+  const lastWeekShifts=S.shifts.filter(s=>{
+    const d=new Date(s.shift_date+'T00:00:00');
+    const dow=new Date().getDay();
+    const wkStart=new Date();wkStart.setDate(wkStart.getDate()-(dow===0?6:dow-1));wkStart.setHours(0,0,0,0);
+    const lwStart=new Date(wkStart);lwStart.setDate(lwStart.getDate()-7);
+    return d>=lwStart&&d<wkStart;
+  });
+  const lastWeekRate=lastWeekShifts.length
+    ?Math.round(lastWeekShifts.reduce((a,s)=>a+s.earn/s.hours,0)/lastWeekShifts.length)
+    :null;
+  const rateDiff=(lastWeekRate&&effectiveRate)?effectiveRate-lastWeekRate:null;
+  document.getElementById('kpi-rate-badge').textContent=(r&&effectiveRate)?'▲ Rain boost active':(rateDiff!==null?(rateDiff>=0?'▲ +₹'+rateDiff+' vs last week':'▼ ₹'+Math.abs(rateDiff)+' vs last week'):(allShifts.length?'Your avg ₹/hr':'No data yet'));
+
+  // Surge index: ratio of today's day-of-week historical avg vs overall avg
+  const dayAvgs=S.computedDayAvgs||[0,0,0,0,0,0,0];
+  const overall=dayAvgs.reduce((a,b)=>a+b,0)/dayAvgs.length;
+  const todayDow=new Date().getDay();
+  const surgeIdx=overall>0?parseFloat((dayAvgs[todayDow===0?6:todayDow-1]/overall).toFixed(1)):null;
+  const surgeBase=surgeIdx!==null?(r?surgeIdx*1.5:surgeIdx):null;
+  document.getElementById('kpi-surge').textContent=surgeBase!==null?surgeBase.toFixed(1)+'×':'—';
+  document.getElementById('kpi-surge-sub').textContent=surgeBase===null?'Log shifts to see':(r?'Rain surge active':(surgeBase>1.2?'High demand now':surgeBase>0.9?'Normal demand':'Below average'));
+  document.getElementById('kpi-surge-badge').textContent=surgeBase===null?'No data':(r?'▲ Very high demand':(surgeBase>1.2?'▲ High demand':'→ Normal'));
+
+  const earned=weekTotal();
+  document.getElementById('kpi-target').textContent='₹'+S.target.toLocaleString('en-IN');
+  document.getElementById('kpi-target-sub').textContent='₹'+earned.toLocaleString('en-IN')+' earned so far';
+  const pct=Math.min(Math.round((earned/S.target)*100),100);
+  document.getElementById('target-bar').style.width=pct+'%';
+
+  // Target probability: logistic model based on earned vs target, days left
+  const daysLeft=7-S.todayIndex;
+  const remaining=Math.max(S.target-earned,0);
+  const projectedDaily=(effectiveRate!==null&&typicalHours!==null)?effectiveRate*typicalHours:null;
+  const projectedTotal=projectedDaily!==null?earned+projectedDaily*daysLeft:null;
+  const rawProb=(projectedTotal!==null&&S.target>0)?Math.min(99,Math.max(1,Math.round((projectedTotal/S.target)*70+(earned/S.target)*30))):null;
+  const probEl=document.getElementById('kpi-prob');
+  if(probEl){probEl.textContent=rawProb!==null?rawProb+'%':'—';}
+  const dailyGoalEl=document.getElementById('daily-target-lbl');
+  if(dailyGoalEl){dailyGoalEl.textContent='₹'+Math.round(S.target/22).toLocaleString('en-IN');}
+}
+
+function renderChart(){
+  const r=S.isRaining,data=r?S.weekEarningsRain:S.weekEarnings;
+  const dayAvgs=S.computedDayAvgs||[0,0,0,0,0,0,0];
+  const max=Math.max(...data.map(v=>v||0),...dayAvgs,800);
+  let html='';
+  data.forEach((val,i)=>{
+    const isToday=i===S.todayIndex,isFuture=i>S.todayIndex;
+    // Use day-average based forecast for future bars instead of random
+    const forecastAmt=r?Math.round(dayAvgs[i]*1.2):dayAvgs[i];
+    const amount=val??forecastAmt;
+    const h=Math.max(Math.round((amount/max)*120),8);
+    const cls=['bar',isToday?'today':'',isFuture?'future':'',r?'rain':''].filter(Boolean).join(' ');
+    const lbl=isFuture?`~₹${amount}`:(val?`₹${val}`:'—');
+    html+=`<div class="bar-col"><div class="bar-outer"><div class="${cls}" style="height:${h}px"><div class="bar-tip">${S.labels[i]}: ₹${amount}</div></div></div><div class="bar-amt" style="color:${isFuture?'var(--ink-4)':'var(--ink-2)'}">${lbl}</div><div class="bar-lbl">${S.labels[i]}</div></div>`;
+  });
+  document.getElementById('chart-wrap').innerHTML=html;
+  const tag=document.getElementById('chart-wtag');
+  tag.className=r?'wtag rainy':'wtag sunny';
+  tag.textContent=r?'🌧️ Rain adjusted':'☀️ Normal';
+}
+
+function renderWeekCompare(){
+  const thisWeek=weekTotal();
+  const diff=S.prevWeekTotal>0?thisWeek-S.prevWeekTotal:null;
+  const pct=diff!==null&&S.prevWeekTotal>0?Math.round((diff/S.prevWeekTotal)*100):null;
+  const progPct=S.target>0?Math.min(Math.round((thisWeek/S.target)*100),100):0;
+  const remaining=Math.max(S.target-thisWeek,0);
+  const days=(S.isRaining?S.weekEarningsRain:S.weekEarnings).filter(Boolean).length;
+  document.getElementById('cmp-this').textContent=thisWeek>0?'₹'+thisWeek.toLocaleString('en-IN'):'—';
+  document.getElementById('cmp-this-sub').textContent=days>0?days+' days logged':'No shifts yet';
+  document.getElementById('cmp-last').textContent=S.prevWeekTotal>0?'₹'+S.prevWeekTotal.toLocaleString('en-IN'):'—';
+  const b=document.getElementById('cmp-badge');
+  if(diff===null){b.className='cmp-badge flat';b.textContent='No previous week data';}
+  else if(diff>=0){b.className='cmp-badge up';b.textContent=`▲ ₹${diff} more than last week`+(pct!==null?` (+${pct}%)`:'');}
+  else{b.className='cmp-badge down';b.textContent=`▼ ₹${Math.abs(diff)} less than last week`+(pct!==null?` (${pct}%)`:'');}
+  document.getElementById('cmp-pct').textContent=progPct+'%';
+  document.getElementById('cmp-bar').style.width=progPct+'%';
+  const avgShiftEarn=getAvgRate();
+  const shiftsNeeded=avgShiftEarn&&avgShiftEarn>0?Math.ceil(remaining/(avgShiftEarn*4)):null;
+  document.getElementById('cmp-note').textContent=remaining<=0?'🎉 Target achieved this week!':shiftsNeeded?`₹${remaining.toLocaleString('en-IN')} more · ~${shiftsNeeded} shifts to go`:`₹${remaining.toLocaleString('en-IN')} remaining`;
+}
+
+async function renderWindows(){
+  const winStack = document.getElementById('win-stack');
+  winStack.innerHTML = '<p style="color:var(--ink-4);font-size:13px">Loading best windows…</p>';
+  try {
+    const hod = new Date().getHours();
+    const data = await window.fetchV2(`/analytics/zones?hour_of_day=${hod}`);
+    const rankings = (data && data.rankings) ? data.rankings : [];
+    const top3 = rankings.slice(0, 3);
+    if (!top3.length) {
+      winStack.innerHTML = '<p style="color:var(--ink-4);font-size:13px">Log more shifts to see best windows.</p>';
+      return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    winStack.innerHTML = top3.map((z, i) => {
+      const rate = z.expected_rate || z.rate_per_hour || z.rate || 0;
+      const lo = Math.round(rate * 0.85);
+      const hi = Math.round(rate * 1.15);
+      return `<div class="win-card" style="position:relative">
+        <div class="win-rank">${medals[i]}</div>
+        <div class="win-time">${z.zone || z.name || 'Zone'}</div>
+        <div class="win-loc">📍 ${z.demand ? z.demand.charAt(0).toUpperCase() + z.demand.slice(1) + ' demand' : 'Smart pick'}</div>
+        <div class="win-earn">₹${lo}–₹${hi}/hr</div>
+        <div class="win-ci">${z.recommendation_score ? 'Score: ' + Math.round(z.recommendation_score) : ''}</div>
+        <span class="method-tag">Smart Rank</span>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    // FastAPI unavailable — fall back to static CITY_WINDOWS data
+    const city = S.city || '';
+    const windows = CITY_WINDOWS[city] || CITY_WINDOWS['Bengaluru'] || [];
+    if (!windows.length) {
+      winStack.innerHTML = '<p style="color:var(--ink-4);font-size:13px">Log more shifts to see best windows.</p>';
+      return;
+    }
+    const medals = ['🥇','🥈','🥉'];
+    const r = S.isRaining;
+    winStack.innerHTML = windows.slice(0,3).map((w, i) => {
+      const lo = r ? w.ciN : w.lo;
+      const hi = r ? w.hiN : w.hi;
+      return `<div class="win-card" style="position:relative">
+        <div class="win-rank">${medals[i]}</div>
+        <div class="win-time">${w.day} · ${w.time}</div>
+        <div class="win-loc">📍 ${w.zone}</div>
+        <div class="win-earn">₹${lo}–₹${hi}/hr${r ? ' ☔' : ''}</div>
+        <div class="win-ci">~${w.ci} confidence</div>
+        <span class="method-tag">City Average</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderRecentShifts(){
+  const wrap=document.getElementById('recent-shifts');
+  const recent=S.shifts.slice(0,4);
+  if(!recent.length){wrap.innerHTML='<p style="color:var(--ink-4);font-size:13px">No shifts yet. <a href="shifts.html" style="color:var(--primary);font-weight:600">Log your first →</a></p>';return;}
+  wrap.innerHTML=recent.map(s=>{
+    const diff=s.earn-s.predicted,cls=diff>=0?'above':'below';
+    const vs=diff>=0?`▲ ₹${diff} above forecast`:`▼ ₹${Math.abs(diff)} below forecast`;
+    return `<div class="shift-item"><div class="s-dot ${cls}"></div><div><div class="s-zone">${s.zone}</div><div class="s-meta">${s.date_label||s.shift_date||'—'} · ${s.hours}h · ${s.orders} orders</div></div><div class="s-right"><div class="s-earn">₹${s.earn}</div><div class="s-vs ${cls}">${vs}</div></div></div>`;
+  }).join('');
+}
+
+async function logShift(){
+  const zone=document.getElementById('log-zone').value;
+  const hours=parseFloat(document.getElementById('log-hours').value);
+  const earn=parseInt(document.getElementById('log-earn').value);
+  const orders=parseInt(document.getElementById('log-orders').value);
+  if(!zone)return showToast('Select a zone','err');
+  if(!hours||!earn||!orders)return showToast('Fill all fields','err');
+  const allShiftsForPred=S.shifts.filter(s=>s.earn>0&&s.hours>0);
+  const currentAvgRate=allShiftsForPred.length
+    ?Math.round(allShiftsForPred.reduce((a,s)=>a+s.earn/s.hours,0)/allShiftsForPred.length)
+    :null;
+  const predicted=currentAvgRate!==null?Math.round(currentAvgRate*hours):0;
+  try{
+    const shift=await apiFetch('POST','/shifts',{
+      zone,hours,earn,orders,predicted,
+      date_label:new Date().toLocaleDateString('en-IN',{weekday:'short'}),
+      shift_date:new Date().toISOString().slice(0,10),
+      platform:S.platform
+    });
+    S.shifts.unshift(shift);
+    // Update this week's bar
+    const curr=S.weekEarnings[S.todayIndex]||0;
+    S.weekEarnings[S.todayIndex]=curr+earn;
+    S.weekEarningsRain[S.todayIndex]=Math.round((curr+earn)*1.2);
+    document.getElementById('log-zone').value='';
+    ['log-hours','log-earn','log-orders'].forEach(id=>document.getElementById(id).value='');
+    renderKPIs();renderChart();renderWeekCompare();renderRecentShifts();
+    showToast('Shift logged! ₹'+earn+' added ✓','ok');
+  }catch(e){showToast('Error: '+e.message,'err');}
+}
+
+function getAvgRate(){
+  const allS=S.shifts.filter(s=>s.earn>0&&s.hours>0);
+  return allS.length?Math.round(allS.reduce((a,s)=>a+s.earn/s.hours,0)/allS.length):null;
+}
+
+function toggleRain(){
+  S.isRaining=!S.isRaining;
+  document.getElementById('rain-toggle').classList.toggle('rain-on',S.isRaining);
+  document.getElementById('rain-banner').style.display=S.isRaining?'block':'none';
+  const tag=document.getElementById('weather-tag');
+  tag.className=S.isRaining?'wtag rainy':'wtag sunny';
+  tag.textContent=S.isRaining?'🌧️ Rainy':'☀️ Clear';
+  // Recompute peak windows from real data only — no multiplier projections
+  renderPeakWindowsFallback();
+  renderKPIs();renderChart();renderWeekCompare();renderWindows();
+  showToast(S.isRaining?'🌧️ Rain mode on — forecasts adjusted':'☀️ Rain mode off','ok');
+}
+
+function toggleDark(){
+  document.body.classList.toggle('dark');
+  const on=document.body.classList.contains('dark');
+  localStorage.setItem('ss_dark',on?'1':'0');
+  document.getElementById('dark-btn').querySelector('svg').innerHTML=on
+    ?'<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+    :'<path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>';
+}
+
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.className='toast '+(type||'ok')+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function signOut(){localStorage.removeItem('ss_user');localStorage.removeItem('ss_token');window.location.href='index.html';}
+
+init();
+</script>
+</body>
+</html>

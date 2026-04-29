@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShiftSense — Predict & Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+/* ── Predict page extras ── */
+.concept-tag {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:9px; font-weight:700; padding:3px 7px; border-radius:4px;
+  background:rgba(79,70,229,0.12); color:var(--primary-d);
+  text-transform:uppercase; letter-spacing:0.5px; border:1px solid var(--primary-m);
+}
+.concept-tag.green { background:rgba(22,163,74,0.12); color:var(--green-t); border-color:var(--green-m); }
+.concept-tag.amber { background:rgba(217,119,6,0.12); color:var(--amber-t); border-color:var(--amber-m); }
+.concept-tag.red   { background:rgba(220,38,38,0.12); color:var(--red-t); border-color:var(--red-m); }
+
+/* ── Slider styles ── */
+.slider-wrap { display:flex; align-items:center; gap:12px; margin:10px 0; }
+.range-inp {
+  flex:1; -webkit-appearance:none; appearance:none;
+  height:6px; border-radius:3px; background:var(--border); outline:none;
+  cursor:pointer;
+}
+.range-inp::-webkit-slider-thumb {
+  -webkit-appearance:none; appearance:none;
+  width:18px; height:18px; border-radius:50%;
+  background:var(--primary); cursor:pointer; border:2px solid #fff;
+  box-shadow:0 2px 6px rgba(79,70,229,0.35);
+}
+.slider-val {
+  font-size:18px; font-weight:800; color:var(--primary);
+  min-width:60px; text-align:right; letter-spacing:-0.5px;
+}
+.slider-label { font-size:11px; color:var(--ink-3); }
+
+/* ── Gauge / Donut ── */
+.gauge-wrap { display:flex; flex-direction:column; align-items:center; gap:4px; }
+.gauge-ring  { position:relative; width:120px; height:120px; }
+.gauge-ring svg { transform:rotate(-90deg); }
+.gauge-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+.gauge-val { font-size:22px; font-weight:800; color:var(--ink); letter-spacing:-0.8px; }
+.gauge-sub { font-size:10px; color:var(--ink-3); margin-top:1px; }
+
+/* ── Scatter plot ── */
+.scatter-svg { width:100%; overflow:visible; }
+.dot { cursor:pointer; transition:r 0.15s; }
+.dot:hover { r:7; }
+
+/* ── Decision tree ── */
+.tree-wrap { overflow-x:auto; padding:8px 0; }
+.tree-svg { min-width:480px; width:100%; }
+.tree-node rect { rx:6; ry:6; }
+.tree-lbl { font-family:'Plus Jakarta Sans',sans-serif; }
+
+/* ── Distribution histogram ── */
+.hist-bar { transition:opacity 0.2s; }
+.hist-bar:hover { opacity:0.8; }
+
+/* ── Confidence band ── */
+.ci-band { opacity:0.15; }
+
+/* ── Platform optimizer ── */
+.plat-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 14px; border-radius:var(--r);
+  border:1px solid var(--border); background:var(--surface);
+  transition:border-color 0.18s,background 0.18s; margin-bottom:8px;
+}
+.plat-row.best { border-color:var(--green-m); background:var(--green-l); }
+.plat-bar-track { flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden; }
+.plat-bar-fill  { height:100%; border-radius:4px; transition:width 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ── Stats box ── */
+.stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.stat-box { background:var(--bg); border:1px solid var(--border); border-radius:var(--r); padding:12px 14px; text-align:center; }
+.stat-box-val { font-size:20px; font-weight:800; color:var(--ink); letter-spacing:-0.5px; }
+.stat-box-lbl { font-size:10px; color:var(--ink-3); margin-top:3px; font-weight:600; text-transform:uppercase; letter-spacing:0.3px; }
+
+/* ── Normal curve ── */
+.normal-svg { width:100%; }
+
+/* ── Exponential smoothing ── */
+.alpha-label { font-size:11px; color:var(--ink-3); }
+
+/* ── Prob meter ── */
+.prob-arc { transition:stroke-dasharray 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* ── Box plot ── */
+.boxplot-svg { width:100%; overflow:visible; }
+
+/* ── Regression line ── */
+.reg-line { stroke:var(--primary); stroke-width:2; fill:none; stroke-dasharray:none; }
+.ci-upper { fill:none; stroke:var(--primary-m); stroke-width:1; stroke-dasharray:4 3; }
+.ci-lower { fill:none; stroke:var(--primary-m); stroke-width:1; stroke-dasharray:4 3; }
+
+.section-intro {
+  font-size:12px; color:var(--ink-3); line-height:1.6;
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:var(--r); padding:12px 16px; margin-bottom:18px;
+}
+.formula-box {
+  font-family:monospace; font-size:12px; background:var(--primary-l);
+  color:var(--primary-d); border:1px solid var(--primary-m);
+  border-radius:var(--r-s); padding:8px 12px; margin:8px 0;
+  letter-spacing:0.3px;
+}
+</style>
+
+<style>
+/* ── Dynamic forecast bars ── */
+.forecast-bars { display:flex; gap:8px; align-items:flex-end; height:120px; padding:8px 0; }
+.forecast-col { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; }
+.forecast-col.forecast-today .forecast-day { color:var(--primary); font-weight:700; }
+.forecast-bar-wrap { flex:1; width:100%; display:flex; align-items:flex-end; justify-content:center; }
+.forecast-bar { width:80%; border-radius:4px 4px 0 0; transition:height 0.6s cubic-bezier(0.34,1.56,0.64,1); min-height:4px; }
+.forecast-day { font-size:10px; font-weight:600; color:var(--ink-3); }
+.forecast-val { font-size:11px; font-weight:700; color:var(--ink); }
+.forecast-si { font-size:9px; color:var(--ink-4); }
+
+/* ── Zone tree rows ── */
+.zone-tree-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:var(--r); border:1px solid var(--border); margin-bottom:6px; background:var(--surface); }
+.zone-rank { min-width:52px; font-size:12px; }
+.zone-info { flex:1; }
+.zone-name { font-size:13px; font-weight:700; color:var(--ink); }
+.zone-meta { font-size:10px; color:var(--ink-4); margin-top:2px; }
+.zone-bar-wrap { width:100px; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.zone-bar { height:100%; border-radius:3px; }
+.zone-rate { min-width:60px; text-align:right; font-size:13px; font-weight:700; }
+.zone-demand { min-width:50px; text-align:right; font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; }
+</style>
+
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="shell">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sb-logo"><img src="logo.png" style="width:22px;height:22px;object-fit:contain;border-radius:5px;" alt="ShiftSense"></div>
+    <button class="nav-btn" title="Dashboard" onclick="location.href='dashboard.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+    <button class="nav-btn" title="Shifts" onclick="location.href='shifts.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></button>
+    <button class="nav-btn" title="Zones" onclick="location.href='zones.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+    <button class="nav-btn" title="Analytics" onclick="location.href='analytics.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></button>
+    <button class="nav-btn" title="History" onclick="location.href='history.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
+    <button class="nav-btn active" title="Predict & Model" onclick="location.href='predict.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+    <div class="sb-bottom">
+      <button class="nav-btn" title="Toggle Dark" onclick="toggleDark()" id="dark-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      <button class="nav-btn" title="Sign Out" onclick="signOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="tb-title"><h1>Predict &amp; Model</h1><p>Earnings Estimator · Goal Tracker · Income Patterns · Zone Recommender · Platform Picker</p></div>
+      <div class="tb-right">
+        <div class="profile-chip" onclick="location.href='index.html'">
+          <div class="avatar" id="user-av">R</div>
+          <div><div class="chip-name" id="chip-name">Rider</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ════════════════════════════════════════════
+           SECTION 1: Earnings Estimator
+           ════════════════════════════════════════════ -->
+      <p class="sec-label">Earnings Estimator</p>
+      <div class="g-main" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">What-If Earnings Simulator</div>
+              <div class="card-sub">Drag the slider to predict your earnings before starting</div>
+            </div>
+            <span class="concept-tag">Earnings Estimator</span>
+          </div>
+          <div class="section-intro">
+            We use your past shifts to find your personal earning rate. The shaded band shows your typical earnings range.
+          </div>
+          <div class="formula-box" id="lr-formula">Loading model from your data…</div>
+
+          <label class="field-lbl" style="margin-top:14px">Planned Hours Today</label>
+          <div class="slider-wrap">
+            <span class="slider-label">1h</span>
+            <input type="range" class="range-inp" id="hrs-slider" min="1" max="12" step="0.5" value="5" oninput="updateLR()">
+            <span class="slider-label">12h</span>
+            <div class="slider-val" id="lr-result">—</div>
+          </div>
+
+          <!-- Scatter + regression SVG -->
+          <svg class="scatter-svg" viewBox="0 0 480 200" style="margin-top:16px">
+            <defs>
+              <linearGradient id="ciGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4F46E5" stop-opacity="0.1"/>
+                <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.02"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid lines -->
+            <line x1="44" y1="10" x2="44" y2="170" stroke="var(--border)" stroke-width="1"/>
+            <line x1="44" y1="170" x2="470" y2="170" stroke="var(--border)" stroke-width="1"/>
+            <line x1="44" y1="130" x2="470" y2="130" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="44" y1="90"  x2="470" y2="90"  stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="44" y1="50"  x2="470" y2="50"  stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+            <!-- Y labels -->
+            <text x="40" y="173" font-size="9" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹0</text>
+            <text x="40" y="133" font-size="9" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹400</text>
+            <text x="40" y="93"  font-size="9" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹800</text>
+            <text x="40" y="53"  font-size="9" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹1200</text>
+            <!-- X labels -->
+            <text x="88"  y="184" font-size="9" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">2h</text>
+            <text x="173" y="184" font-size="9" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">4h</text>
+            <text x="258" y="184" font-size="9" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">6h</text>
+            <text x="343" y="184" font-size="9" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">8h</text>
+            <text x="428" y="184" font-size="9" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">10h</text>
+            <!-- CI band -->
+            <polygon id="ci-band" points="44,158 470,22 470,10 44,148" fill="url(#ciGrad)"/>
+            <!-- CI upper/lower dashed -->
+            <line id="reg-line" x1="44" y1="158" x2="470" y2="22" class="reg-line"/>
+            <line id="pred-line" x1="258" y1="170" x2="258" y2="90" stroke="var(--primary)" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+            <circle id="pred-dot" cx="258" cy="90" r="5" fill="var(--primary)" stroke="white" stroke-width="2"/>
+            <line id="ci-upper" x1="44" y1="148" x2="470" y2="10" class="ci-upper"/>
+            <line id="ci-lower" x1="44" y1="168" x2="470" y2="32" class="ci-lower"/>
+            <!-- Regression line -->
+            <line id="reg-line" x1="44" y1="158" x2="470" y2="22" class="reg-line"/>
+            <!-- Data dots rendered dynamically by renderScatterFromShifts() — no static points -->
+            <!-- Current prediction marker -->
+            <circle id="pred-dot" cx="258" cy="90" r="8" fill="none" stroke="var(--primary)" stroke-width="2.5"/>
+            <line id="pred-vline" x1="258" y1="90" x2="258" y2="170" stroke="var(--primary)" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+            <!-- Residual label rendered dynamically when real outlier exists -->
+            <!-- Legend -->
+            <circle cx="52" cy="194" r="4" fill="var(--primary)" opacity="0.7"/>
+            <text x="60" y="197" font-size="9" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Your shifts</text>
+            <circle cx="130" cy="194" r="4" fill="var(--red)" opacity="0.8"/>
+            <text x="138" y="197" font-size="9" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Outlier</text>
+            <line x1="196" y1="194" x2="212" y2="194" stroke="var(--primary)" stroke-width="2"/>
+            <text x="216" y="197" font-size="9" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Regression line</text>
+          </svg>
+
+          <div style="display:flex;gap:16px;margin-top:10px">
+            <div class="stat-box" style="flex:1">
+              <div class="stat-box-val" id="lr-intercept">—</div>
+              <div class="stat-box-lbl">Base earnings (₹)</div>
+            </div>
+            <div class="stat-box" style="flex:1">
+              <div class="stat-box-val" id="lr-slope">—</div>
+              <div class="stat-box-lbl">Your ₹/hour rate</div>
+            </div>
+            <div class="stat-box" style="flex:1">
+              <div class="stat-box-val" id="lr-r2">81%</div>
+              <div class="stat-box-lbl">Prediction accuracy</div>
+            </div>
+            <div class="stat-box" style="flex:1">
+              <div class="stat-box-val" id="lr-ci">—</div>
+              <div class="stat-box-lbl">Accuracy range</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- R² Reliability Gauge -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Income Reliability Score</div>
+              <div class="card-sub">How predictable is your income?</div>
+            </div>
+            <span class="concept-tag">Reliability Score</span>
+          </div>
+          <div class="section-intro">How predictable is your income? A high score means your hours reliably predict your earnings. Below 50% = unpredictable income.</div>
+          <div class="gauge-wrap" style="margin:16px 0">
+            <div class="gauge-ring">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--border)" stroke-width="10"/>
+                <circle id="r2-arc" cx="60" cy="60" r="48" fill="none" stroke="var(--primary)" stroke-width="10"
+                  stroke-dasharray="244 58" stroke-dashoffset="0" transform="rotate(-90 60 60)"
+                  style="transition:stroke-dasharray 0.8s cubic-bezier(0.34,1.56,0.64,1)"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-val" id="r2-gauge-val">81%</div>
+                <div class="gauge-sub">Accuracy score</div>
+              </div>
+            </div>
+            <div class="badge up" id="r2-badge" style="margin-top:4px">High predictability</div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
+            <div class="field-lbl" style="margin-bottom:2px">Simulate accuracy scenario</div>
+            <input type="range" class="range-inp" id="r2-slider" min="10" max="95" value="81" oninput="updateR2()">
+            <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ink-4)">
+              <span>Very volatile</span><span>Very reliable</span>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 10px;background:var(--green-l);border-radius:var(--r-s);border:1px solid var(--green-m)">
+              <span style="color:var(--green-t);font-weight:600">Score ≥ 70%</span>
+              <span style="color:var(--green-t)">✓ Reliable — plan confidently</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 10px;background:var(--amber-l);border-radius:var(--r-s);border:1px solid var(--amber-m)">
+              <span style="color:var(--amber-t);font-weight:600">Score 40–69%</span>
+              <span style="color:var(--amber-t)">⚠ Moderate — some variability</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 10px;background:var(--red-l);border-radius:var(--r-s);border:1px solid var(--red-m)">
+              <span style="color:var(--red-t);font-weight:600">Score &lt; 40%</span>
+              <span style="color:var(--red-t)">✗ Volatile — diversify zones</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SECTION 2: Goal Predictor — Target Probability Meter
+           ════════════════════════════════════════════ -->
+      <p class="sec-label">Target Probability</p>
+      <div class="g2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Daily Target Success Meter</div>
+              <div class="card-sub">Probability of hitting your <span id="daily-goal-label-sub">—</span> goal today</div>
+            </div>
+            <span class="concept-tag">Goal Predictor</span>
+          </div>
+          <div class="section-intro">
+            We calculate your chance of hitting today's target based on your zone, hours worked, and time of day.
+          </div>
+          <div class="formula-box" id="logit-formula">Success chance = 72% based on your zone, hours & time</div>
+
+          <!-- Probability arc gauge -->
+          <div class="gauge-wrap" style="margin:20px 0 10px">
+            <div class="gauge-ring" style="width:150px;height:150px">
+              <svg width="150" height="150" viewBox="0 0 150 150">
+                <circle cx="75" cy="75" r="60" fill="none" stroke="var(--border)" stroke-width="12"/>
+                <circle class="prob-arc" id="prob-arc" cx="75" cy="75" r="60" fill="none"
+                  stroke="var(--green)" stroke-width="12"
+                  stroke-dasharray="272 104" stroke-dashoffset="0"
+                  transform="rotate(-90 75 75)"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-val" id="prob-val" style="font-size:26px;color:var(--green)">72%</div>
+                <div class="gauge-sub">Chance of <span id="daily-goal-label-gauge">—</span></div>
+              </div>
+            </div>
+            <div class="badge up" id="prob-badge" style="margin-top:6px">Good shot — keep going!</div>
+          </div>
+
+          <!-- Input sliders -->
+          <div class="field">
+            <label class="field-lbl">Planned hours</label>
+            <div class="slider-wrap">
+              <span class="slider-label">1h</span>
+              <input type="range" class="range-inp" id="prob-hours" min="1" max="12" value="5" step="0.5" oninput="updateLogit()">
+              <span class="slider-label">12h</span>
+              <span class="slider-val" id="ph-val" style="font-size:14px;min-width:28px">5h</span>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-lbl">Zone (1=Low, 5=High value)</label>
+            <div class="slider-wrap">
+              <span class="slider-label">Low</span>
+              <input type="range" class="range-inp" id="prob-zone" min="1" max="5" value="3" step="1" oninput="updateLogit()">
+              <span class="slider-label">High</span>
+              <span class="slider-val" id="pz-val" style="font-size:14px;min-width:28px">3</span>
+            </div>
+          </div>
+          <div class="field" style="display:flex;align-items:center;gap:10px;margin-bottom:0">
+            <label class="field-lbl" style="margin:0">Evening shift?</label>
+            <input type="checkbox" id="prob-eve" onchange="updateLogit()" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer" checked>
+            <span style="font-size:12px;color:var(--ink-3)">+20% earnings boost on evenings</span>
+          </div>
+        </div>
+
+        <!-- Sigmoid curve visualizer -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">How your success chance grows with hours</div>
+              <div class="card-sub">More hours = higher chance of hitting your goal</div>
+            </div>
+            <span class="concept-tag">Goal Predictor</span>
+          </div>
+          <svg class="normal-svg" viewBox="0 0 320 200" style="margin-top:8px">
+            <!-- Grid -->
+            <line x1="40" y1="10" x2="40" y2="175" stroke="var(--border)" stroke-width="1"/>
+            <line x1="40" y1="175" x2="310" y2="175" stroke="var(--border)" stroke-width="1"/>
+            <line x1="40" y1="95" x2="310" y2="95" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+            <!-- Y labels -->
+            <text x="36" y="178" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">0%</text>
+            <text x="36" y="98" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">50%</text>
+            <text x="36" y="14" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">100%</text>
+            <!-- X labels -->
+            <text x="40"  y="188" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">1h</text>
+            <text x="100" y="188" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">3h</text>
+            <text x="175" y="188" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">6h</text>
+            <text x="250" y="188" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">9h</text>
+            <text x="310" y="188" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">11h</text>
+            <!-- Sigmoid path (pre-calculated for evening+zone3) -->
+            <path d="M40,172 C55,170 70,165 90,155 C110,144 130,125 155,100 C175,78 195,55 215,38 C235,24 255,16 275,13 C290,11 300,11 310,11"
+              stroke="var(--green)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- Shaded area under 50% line -->
+            <path d="M40,172 C55,170 70,165 90,155 C110,144 130,125 155,100 L155,175 L40,175 Z"
+              fill="var(--red-l)" opacity="0.5"/>
+            <path d="M155,100 C175,78 195,55 215,38 C235,24 255,16 275,13 C290,11 300,11 310,11 L310,175 L155,175 Z"
+              fill="var(--green-l)" opacity="0.5"/>
+            <!-- Decision boundary -->
+            <line x1="155" y1="10" x2="155" y2="175" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="157" y="22" font-size="8" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Threshold ~6h</text>
+            <!-- Current point -->
+            <circle id="sig-dot" cx="175" cy="78" r="6" fill="var(--primary)" stroke="#fff" stroke-width="2"/>
+            <text x="178" y="72" font-size="8" fill="var(--primary)" font-family="Plus Jakarta Sans" font-weight="700" id="sig-label">72%</text>
+            <!-- Labels -->
+            <text x="80"  y="165" font-size="8" fill="var(--red-t)" font-family="Plus Jakarta Sans" font-weight="700">Miss zone</text>
+            <text x="220" y="165" font-size="8" fill="var(--green-t)" font-family="Plus Jakarta Sans" font-weight="700">Hit zone</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SECTION 3: Earnings Distribution
+           ════════════════════════════════════════════ -->
+      <p class="sec-label">Earnings Distribution &amp; Descriptive Statistics</p>
+      <div class="g-main" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Earnings Frequency Distribution</div>
+              <div class="card-sub">Histogram with normal curve overlay</div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <span class="concept-tag">Earnings Patterns</span>
+              <span class="concept-tag green">Income Shape</span>
+            </div>
+          </div>
+          <div class="section-intro">
+            This shows how your earnings are spread out — whether you consistently earn the same, or if some shifts are much higher or lower than usual.
+          </div>
+          <!-- Histogram SVG -->
+          <svg class="normal-svg" viewBox="0 0 480 200" style="margin-top:8px">
+            <defs>
+              <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4F46E5" stop-opacity="0.7"/>
+                <stop offset="100%" stop-color="#4F46E5" stop-opacity="0.2"/>
+              </linearGradient>
+            </defs>
+            <!-- Grid -->
+            <line x1="44" y1="10" x2="44" y2="165" stroke="var(--border)" stroke-width="1"/>
+            <line x1="44" y1="165" x2="460" y2="165" stroke="var(--border)" stroke-width="1"/>
+            <!-- Histogram bars -->
+            <rect class="hist-bar" x="55"  y="145" width="36" height="20" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="97"  y="120" width="36" height="45" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="139" y="90"  width="36" height="75" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="181" y="55"  width="36" height="110" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="223" y="38"  width="36" height="127" fill="url(#histGrad)" rx="3" stroke="var(--primary)" stroke-width="1.5"/>
+            <rect class="hist-bar" x="265" y="50"  width="36" height="115" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="307" y="82"  width="36" height="83" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="349" y="118" width="36" height="47" fill="url(#histGrad)" rx="3"/>
+            <rect class="hist-bar" x="391" y="145" width="36" height="20" fill="url(#histGrad)" rx="3"/>
+            <!-- X labels -->
+            <text x="73"  y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹200</text>
+            <text x="115" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹350</text>
+            <text x="157" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹500</text>
+            <text x="199" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹650</text>
+            <text x="241" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹800</text>
+            <text x="283" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹950</text>
+            <text x="325" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹1100</text>
+            <text x="367" y="178" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">₹1250</text>
+            <!-- Normal curve overlay -->
+            <path d="M55,165 C70,164 90,158 115,140 C135,124 155,95 180,62 C200,35 230,22 241,20 C252,22 280,35 300,62 C325,95 345,124 365,140 C390,158 415,164 440,165"
+              stroke="var(--amber)" stroke-width="2.5" fill="none" stroke-dasharray="none" opacity="0.9"/>
+            <!-- Mean line -->
+            <line x1="241" y1="10" x2="241" y2="165" stroke="var(--primary)" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <text x="245" y="22" font-size="8" fill="var(--primary)" font-family="Plus Jakarta Sans" font-weight="700">μ = ₹798</text>
+            <!-- Std dev markers -->
+            <line x1="157" y1="60" x2="157" y2="165" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+            <line x1="325" y1="60" x2="325" y2="165" stroke="var(--ink-3)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+            <text x="157" y="55" font-size="7" fill="var(--ink-3)" text-anchor="middle" font-family="Plus Jakarta Sans">μ−σ</text>
+            <text x="325" y="55" font-size="7" fill="var(--ink-3)" text-anchor="middle" font-family="Plus Jakarta Sans">μ+σ</text>
+            <!-- Legend -->
+            <rect x="44" y="190" width="12" height="8" fill="url(#histGrad)" rx="2"/>
+            <text x="60" y="198" font-size="8" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Frequency</text>
+            <line x1="110" y1="194" x2="126" y2="194" stroke="var(--amber)" stroke-width="2"/>
+            <text x="130" y="198" font-size="8" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Normal curve</text>
+          </svg>
+        </div>
+
+        <!-- Descriptive Stats + Box Plot -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Your Earnings at a Glance</div>
+              <div class="card-sub">Average, range and spread of your earnings</div>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="concept-tag amber">Middle Range</span>
+              <span class="concept-tag">Spread</span>
+            </div>
+          </div>
+          <div class="stats-grid" style="margin-bottom:16px" id="desc-stats">
+            <div class="stat-box"><div class="stat-box-val">₹798</div><div class="stat-box-lbl">Mean (μ)</div></div>
+            <div class="stat-box"><div class="stat-box-val">₹820</div><div class="stat-box-lbl">Median</div></div>
+            <div class="stat-box"><div class="stat-box-val">₹168</div><div class="stat-box-lbl">Earnings spread</div></div>
+            <div class="stat-box"><div class="stat-box-val">₹940</div><div class="stat-box-lbl">Mode range</div></div>
+            <div class="stat-box"><div class="stat-box-val">₹490</div><div class="stat-box-lbl">Q1 (25th pct)</div></div>
+            <div class="stat-box"><div class="stat-box-val">₹1,100</div><div class="stat-box-lbl">Q3 (75th pct)</div></div>
+          </div>
+          <!-- IQR label -->
+          <div style="font-size:11px;color:var(--ink-3);margin-bottom:10px">Middle 50% of your shifts earned within a <strong style="color:var(--primary)">₹610</strong> range</div>
+          <!-- Box plot SVG -->
+          <svg class="boxplot-svg" viewBox="0 0 280 80">
+            <text x="0" y="50" font-size="8" fill="var(--ink-4)" font-family="Plus Jakarta Sans">₹200</text>
+            <text x="265" y="50" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹1,400</text>
+            <!-- Whisker line -->
+            <line x1="20" y1="35" x2="260" y2="35" stroke="var(--border)" stroke-width="2"/>
+            <!-- Min/Max whisker caps -->
+            <line x1="20"  y1="28" x2="20"  y2="42" stroke="var(--ink-3)" stroke-width="2"/>
+            <line x1="260" y1="28" x2="260" y2="42" stroke="var(--ink-3)" stroke-width="2"/>
+            <!-- IQR box: Q1=₹490 → 65px, Q3=₹1100 → 210px, scale 0-1400 → 0-280 -->
+            <rect x="78" y="20" width="136" height="30" fill="var(--primary-l)" stroke="var(--primary-m)" stroke-width="1.5" rx="4"/>
+            <!-- Median line: ₹820 → 148px -->
+            <line x1="148" y1="20" x2="148" y2="50" stroke="var(--primary)" stroke-width="2.5"/>
+            <!-- Q labels -->
+            <text x="78"  y="68" font-size="8" fill="var(--ink-3)" text-anchor="middle" font-family="Plus Jakarta Sans">Q1 ₹490</text>
+            <text x="148" y="68" font-size="8" fill="var(--primary)" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="700">Md ₹820</text>
+            <text x="214" y="68" font-size="8" fill="var(--ink-3)" text-anchor="middle" font-family="Plus Jakarta Sans">Q3 ₹1,100</text>
+            <!-- Outlier point -->
+            <circle cx="12" cy="35" r="4" fill="none" stroke="var(--red)" stroke-width="1.5"/>
+            <text x="10" y="16" font-size="7" fill="var(--red)" font-family="Plus Jakarta Sans">outlier</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SECTION 4: Effort vs Reward
+           ════════════════════════════════════════════ -->
+      <p class="sec-label">Effort vs. Reward Analysis</p>
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Hours vs Earnings — Scatter Plot with Trend &amp; Correlation</div>
+            <div class="card-sub">Are longer shifts yielding proportionally more? Spot diminishing returns.</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <span class="concept-tag">Effort vs Reward</span>
+            <span class="concept-tag green">Correlation</span>
+          </div>
+        </div>
+        <div class="section-intro">
+          This shows how much extra you earn for each extra hour worked. Watch for shifts beyond 8h — that's where extra time starts paying less.
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <svg class="scatter-svg" viewBox="0 0 520 220" style="flex:1">
+            <defs>
+              <linearGradient id="dimGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="var(--green-l)" stop-opacity="0.6"/>
+                <stop offset="65%" stop-color="var(--green-l)" stop-opacity="0.3"/>
+                <stop offset="100%" stop-color="var(--amber-l)" stop-opacity="0.5"/>
+              </linearGradient>
+            </defs>
+            <!-- Background zones -->
+            <rect x="44" y="10" width="282" height="165" fill="var(--green-l)" opacity="0.25" rx="4"/>
+            <rect x="326" y="10" width="184" height="165" fill="var(--amber-l)" opacity="0.3" rx="4"/>
+            <text x="130" y="25" font-size="9" fill="var(--green-t)" font-family="Plus Jakarta Sans" font-weight="700">Productive Zone</text>
+            <text x="370" y="25" font-size="9" fill="var(--amber-t)" font-family="Plus Jakarta Sans" font-weight="700">⚠ Extra hours pay less here</text>
+            <!-- Grid -->
+            <line x1="44" y1="10" x2="44" y2="175" stroke="var(--border)" stroke-width="1"/>
+            <line x1="44" y1="175" x2="510" y2="175" stroke="var(--border)" stroke-width="1"/>
+            <line x1="44" y1="135" x2="510" y2="135" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+            <line x1="44" y1="95"  x2="510" y2="95"  stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+            <line x1="44" y1="55"  x2="510" y2="55"  stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+            <!-- Vertical zone separator -->
+            <line x1="326" y1="10" x2="326" y2="175" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="5 3"/>
+            <text x="328" y="185" font-size="8" fill="var(--amber-t)" font-family="Plus Jakarta Sans">8h</text>
+            <!-- Y labels -->
+            <text x="40" y="178" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹0</text>
+            <text x="40" y="138" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹400</text>
+            <text x="40" y="98"  font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹800</text>
+            <text x="40" y="58"  font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹1200</text>
+            <!-- X labels -->
+            <text x="86"  y="190" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">2h</text>
+            <text x="169" y="190" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">4h</text>
+            <text x="252" y="190" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">6h</text>
+            <text x="335" y="190" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">8h</text>
+            <text x="418" y="190" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">10h</text>
+            <text x="501" y="190" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">12h</text>
+            <!-- Scatter dots — rendered dynamically by renderScatterFromShifts() — no static points -->
+            <!-- Trend line (slight curve — polynomial) -->
+            <path d="M44,175 Q200,60 335,52 Q420,48 510,50" stroke="var(--primary)" stroke-width="2" fill="none" stroke-dasharray="none" opacity="0.8"/>
+          </svg>
+          <div style="min-width:140px;display:flex;flex-direction:column;gap:10px">
+            <div class="stat-box"><div class="stat-box-val" style="color:var(--green)">r = +0.87</div><div class="stat-box-lbl">Hours–Earnings link</div></div>
+            <div class="stat-box"><div class="stat-box-val">Strong +ve</div><div class="stat-box-lbl">Correlation type</div></div>
+            <div class="stat-box"><div class="stat-box-val" style="color:var(--amber)">8h</div><div class="stat-box-lbl">Diminishing returns after</div></div>
+            <div style="font-size:11px;color:var(--ink-3);line-height:1.5;padding:10px;background:var(--amber-l);border-radius:var(--r-s);border:1px solid var(--amber-m)">
+              <strong style="color:var(--amber-t)">Insight:</strong> After 8h, each extra hour adds only ~₹<span id="diminish-rate">50</span> vs ₹<span id="peak-rate">—</span> early on. Plan 6–8h shifts for best efficiency.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SECTION 5: Platform Optimizer
+           ════════════════════════════════════════════ -->
+      <p class="sec-label">Multi-Platform Optimizer</p>
+      <div class="g2" style="margin-bottom:24px">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Platform Earnings Predictor</div>
+              <div class="card-sub">Which platform earns more right now?</div>
+            </div>
+            <span class="concept-tag">Platform Predictor</span>
+          </div>
+          <div class="section-intro">
+            <strong>Platform Predictor</strong> uses your past shifts to estimate: <br>
+            Your estimated earnings based on Hours, Zone, Platform &amp; Time of day<br>
+            Platform is a dummy-coded categorical variable. We predict earnings for each platform holding other variables constant.
+          </div>
+          <div class="formula-box" id="mlr-formula-box">Ŷ = ₹? + ₹?·h (zone &amp; time effects require more data)</div>
+
+          <div class="field" style="margin-top:14px">
+            <label class="field-lbl">Zone</label>
+            <select class="sel ni" id="mlr-zone" onchange="updateMLR()">
+              <option value="5">Top Zone (High)</option>
+              <option value="4">Zone 2 (High)</option>
+              <option value="3" selected>Zone 3 (Medium)</option>
+              <option value="2">Zone 4 (Medium)</option>
+              <option value="1">Zone 5 (Low)</option>
+            </select>
+          </div>
+          <div class="form-2col">
+            <div class="field">
+              <label class="field-lbl">Hours</label>
+              <input class="inp ni" type="number" id="mlr-hours" value="5" min="1" max="12" step="0.5" oninput="updateMLR()">
+            </div>
+            <div class="field">
+              <label class="field-lbl">Time Slot</label>
+              <select class="sel ni" id="mlr-slot" onchange="updateMLR()">
+                <option value="0">Morning</option>
+                <option value="0">Afternoon</option>
+                <option value="1" selected>Evening</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="mlr-results" style="margin-top:6px"></div>
+        </div>
+
+        <!-- Decision Tree -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Zone Recommender</div>
+              <div class="card-sub">Follow the steps to find today's best zone</div>
+            </div>
+            <span class="concept-tag amber">Zone Recommender</span>
+          </div>
+          <div class="section-intro">This step-by-step guide uses your past shift data to point you to the zone most likely to earn you the most today.</div>
+          <div class="tree-wrap">
+            <svg class="tree-svg" viewBox="0 0 480 280">
+              <!-- Root -->
+              <rect x="170" y="10" width="140" height="44" rx="8" fill="var(--primary-l)" stroke="var(--primary-m)" stroke-width="1.5"/>
+              <text x="240" y="28" text-anchor="middle" font-size="10" font-weight="700" fill="var(--primary-d)" font-family="Plus Jakarta Sans">Is it Evening?</text>
+              <text x="240" y="44" text-anchor="middle" font-size="9" fill="var(--primary)" font-family="Plus Jakarta Sans">(6 PM – 10 PM)</text>
+
+              <!-- Branch lines from root -->
+              <line x1="190" y1="54" x2="110" y2="100" stroke="var(--border)" stroke-width="1.5"/>
+              <line x1="290" y1="54" x2="370" y2="100" stroke="var(--border)" stroke-width="1.5"/>
+              <text x="135" y="82" font-size="9" fill="var(--red-t)" font-family="Plus Jakarta Sans" font-weight="700">No</text>
+              <text x="330" y="82" font-size="9" fill="var(--green-t)" font-family="Plus Jakarta Sans" font-weight="700">Yes ✓</text>
+
+              <!-- Left node: Not evening -->
+              <rect x="40" y="100" width="140" height="44" rx="8" fill="var(--bg)" stroke="var(--border)" stroke-width="1.5"/>
+              <text x="110" y="118" text-anchor="middle" font-size="10" font-weight="700" fill="var(--ink)" font-family="Plus Jakarta Sans">Zone Demand?</text>
+              <text x="110" y="134" text-anchor="middle" font-size="9" fill="var(--ink-3)" font-family="Plus Jakarta Sans">High / Medium / Low</text>
+
+              <!-- Right node: Evening (highlighted) -->
+              <rect x="300" y="100" width="140" height="44" rx="8" fill="var(--green-l)" stroke="var(--green-m)" stroke-width="2"/>
+              <text x="370" y="118" text-anchor="middle" font-size="10" font-weight="700" fill="var(--green-t)" font-family="Plus Jakarta Sans">Zone Demand?</text>
+              <text x="370" y="134" text-anchor="middle" font-size="9" fill="var(--green)" font-family="Plus Jakarta Sans">High / Medium / Low</text>
+
+              <!-- Left-left leaf -->
+              <line x1="70"  y1="144" x2="55"  y2="190" stroke="var(--border)" stroke-width="1.5"/>
+              <line x1="110" y1="144" x2="110" y2="190" stroke="var(--border)" stroke-width="1.5"/>
+              <line x1="150" y1="144" x2="165" y2="190" stroke="var(--border)" stroke-width="1.5"/>
+
+              <rect x="18"  y="190" width="76" height="42" rx="6" fill="var(--green-l)"  stroke="var(--green-m)" stroke-width="1.5"/>
+              <text x="56"  y="206" text-anchor="middle" font-size="9"  font-weight="700" fill="var(--green-t)" font-family="Plus Jakarta Sans">High zone</text>
+              <text x="56"  y="221" text-anchor="middle" font-size="10" font-weight="800" fill="var(--green)"   font-family="Plus Jakarta Sans">₹148/hr</text>
+
+              <rect x="72"  y="190" width="76" height="42" rx="6" fill="var(--amber-l)"  stroke="var(--amber-m)" stroke-width="1.5"/>
+              <text x="110" y="206" text-anchor="middle" font-size="9"  font-weight="700" fill="var(--amber-t)" font-family="Plus Jakarta Sans">Med zone</text>
+              <text x="110" y="221" text-anchor="middle" font-size="10" font-weight="800" fill="var(--amber)"   font-family="Plus Jakarta Sans">₹108/hr</text>
+
+              <rect x="128" y="190" width="76" height="42" rx="6" fill="var(--red-l)"    stroke="var(--red-m)"   stroke-width="1.5"/>
+              <text x="166" y="206" text-anchor="middle" font-size="9"  font-weight="700" fill="var(--red-t)"   font-family="Plus Jakarta Sans">Low zone</text>
+              <text x="166" y="221" text-anchor="middle" font-size="10" font-weight="800" fill="var(--red)"     font-family="Plus Jakarta Sans">₹78/hr</text>
+
+              <!-- Right-right leaves (evening, highlighted active path) -->
+              <line x1="330" y1="144" x2="315" y2="190" stroke="var(--green)" stroke-width="2"/>
+              <line x1="370" y1="144" x2="370" y2="190" stroke="var(--green)" stroke-width="2"/>
+              <line x1="410" y1="144" x2="425" y2="190" stroke="var(--border)" stroke-width="1.5"/>
+
+              <rect x="278" y="190" width="76" height="42" rx="6" fill="var(--primary)"  stroke="var(--primary)" stroke-width="2"/>
+              <text x="316" y="206" text-anchor="middle" font-size="9"  font-weight="700" fill="#fff" font-family="Plus Jakarta Sans">HIGH zone ★</text>
+              <text x="316" y="221" text-anchor="middle" font-size="10" font-weight="800" fill="#fff" font-family="Plus Jakarta Sans">₹215/hr</text>
+
+              <rect x="332" y="190" width="76" height="42" rx="6" fill="var(--green-l)"  stroke="var(--green-m)" stroke-width="2"/>
+              <text x="370" y="206" text-anchor="middle" font-size="9"  font-weight="700" fill="var(--green-t)" font-family="Plus Jakarta Sans">Med zone</text>
+              <text x="370" y="221" text-anchor="middle" font-size="10" font-weight="800" fill="var(--green)"   font-family="Plus Jakarta Sans">₹162/hr</text>
+
+              <rect x="388" y="190" width="76" height="42" rx="6" fill="var(--red-l)"    stroke="var(--red-m)"   stroke-width="1.5"/>
+              <text x="426" y="206" text-anchor="middle" font-size="9"  font-weight="700" fill="var(--red-t)"   font-family="Plus Jakarta Sans">Low zone</text>
+              <text x="426" y="221" text-anchor="middle" font-size="10" font-weight="800" fill="var(--red)"     font-family="Plus Jakarta Sans">₹98/hr</text>
+
+              <!-- Active path annotation -->
+              <rect x="260" y="248" width="220" height="26" rx="6" fill="var(--primary)" opacity="0.9"/>
+              <text x="370" y="265" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="Plus Jakarta Sans" id="zone-rec-best">★ Best zone: —</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════
+           SECTION 6: Exponential Smoothing
+           ════════════════════════════════════════════ -->
+      <p class="sec-label">Exponential Smoothing Forecast</p>
+      <div class="card" style="margin-bottom:24px">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Adaptive Earnings Forecast — Exponential Smoothing</div>
+            <div class="card-sub">Adjust α to weight recent shifts more (high α) or smooth noise (low α)</div>
+          </div>
+          <span class="concept-tag green">Exponential Smoothing</span>
+        </div>
+        <div class="section-intro">
+          Formula: <strong>Sₜ = α·Xₜ + (1−α)·Sₜ₋₁</strong>. A high α (close to 1) makes the forecast react quickly to recent changes. A low α smooths over noise. Unlike a simple Moving Average, older data is never abruptly dropped — it decays exponentially.
+        </div>
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div style="flex:1">
+            <div style="margin-bottom:12px">
+              <label class="field-lbl">Smoothing factor α = <span id="alpha-val" style="color:var(--primary);font-size:13px">0.4</span></label>
+              <div class="slider-wrap" style="margin-top:6px">
+                <span class="slider-label">0.1 (smooth)</span>
+                <input type="range" class="range-inp" id="alpha-slider" min="0.1" max="0.9" step="0.1" value="0.4" oninput="updateSmoothing()">
+                <span class="slider-label">0.9 (reactive)</span>
+              </div>
+              <div class="formula-box" id="smooth-formula" style="margin-top:8px">Log shifts to see forecast</div>
+            </div>
+            <svg class="normal-svg" viewBox="0 0 480 180">
+              <line x1="44" y1="10" x2="44" y2="155" stroke="var(--border)" stroke-width="1"/>
+              <line x1="44" y1="155" x2="470" y2="155" stroke="var(--border)" stroke-width="1"/>
+              <line x1="44" y1="115" x2="470" y2="115" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+              <line x1="44" y1="75"  x2="470" y2="75"  stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+              <!-- Y -->
+              <text x="40" y="158" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹400</text>
+              <text x="40" y="118" font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹700</text>
+              <text x="40" y="78"  font-size="8" fill="var(--ink-4)" text-anchor="end" font-family="Plus Jakarta Sans">₹1000</text>
+              <!-- Raw data line — points rendered dynamically by renderSmoothingChart() -->
+              <polyline id="raw-line" points=""
+                stroke="var(--border)" stroke-width="1.5" fill="none"/>
+              <!-- Raw dots rendered dynamically -->
+              <!-- Smoothed line — points rendered dynamically -->
+              <polyline id="smooth-line" points=""
+                stroke="var(--primary)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- Forecast point -->
+              <circle id="smooth-forecast-dot" cx="458" cy="96" r="6" fill="var(--primary)" stroke="#fff" stroke-width="2"/>
+              <!-- X labels -->
+              <text x="44"  y="168" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">Day 1</text>
+              <text x="228" y="168" font-size="8" fill="var(--ink-4)" text-anchor="middle" font-family="Plus Jakarta Sans">Day 5</text>
+              <text x="458" y="168" font-size="8" fill="var(--primary)" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="700">Today</text>
+              <!-- Legend -->
+              <line x1="50" y1="178" x2="66" y2="178" stroke="var(--ink-3)" stroke-width="1.5"/>
+              <text x="70" y="182" font-size="8" fill="var(--ink-3)" font-family="Plus Jakarta Sans">Actual daily earnings</text>
+              <line x1="190" y1="178" x2="206" y2="178" stroke="var(--primary)" stroke-width="2.5"/>
+              <text x="210" y="182" font-size="8" fill="var(--primary)" font-family="Plus Jakarta Sans" font-weight="600">Exponential smoothing</text>
+            </svg>
+          </div>
+          <div style="min-width:160px;display:flex;flex-direction:column;gap:10px">
+            <div class="stat-box"><div class="stat-box-val" id="smooth-today" style="color:var(--primary)">—</div><div class="stat-box-lbl">Smoothed Today</div></div>
+            <div class="stat-box"><div class="stat-box-val" id="smooth-next">—</div><div class="stat-box-lbl">Next Day Forecast</div></div>
+            <div style="font-size:11px;color:var(--ink-3);line-height:1.6;padding:10px;background:var(--bg);border-radius:var(--r-s);border:1px solid var(--border)">
+              <strong>α = <span id="alpha-insight-val">0.4</span></strong><br>
+              <span id="alpha-insight">Balanced — weights recent shifts moderately. Good for stable weeks.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end content -->
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* ────────────────────────────────────────
+   Init
+──────────────────────────────────────── */
+// ── API helpers ──────────────────────────────────────────────────
+const API=window.SS_CONFIG.API;
+function token(){return localStorage.getItem('ss_token');}
+async function apiFetch(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(token())opts.headers['Authorization']='Bearer '+token();
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'API error');
+  return data;
+}
+if(!token()){location.href='index.html';}
+
+// City zones for predict page
+const _PREDICT_ZONES={
+  'Bengaluru':[
+    {name:'Koramangala',val:5,tier:'High'},
+    {name:'Indiranagar',val:4,tier:'High'},
+    {name:'HSR Layout',val:3,tier:'Medium'},
+    {name:'MG Road',val:2,tier:'Medium'},
+    {name:'Whitefield',val:1,tier:'Low'},
+  ],
+  'Coimbatore':[
+    {name:'RS Puram',val:5,tier:'High'},
+    {name:'Gandhipuram',val:4,tier:'High'},
+    {name:'Peelamedu',val:3,tier:'Medium'},
+    {name:'Saibaba Colony',val:2,tier:'Medium'},
+    {name:'Ukkadam',val:1,tier:'Low'},
+  ],
+  'Chennai':[
+    {name:'Anna Nagar',val:5,tier:'High'},
+    {name:'T Nagar',val:4,tier:'High'},
+    {name:'Adyar',val:3,tier:'Medium'},
+    {name:'Velachery',val:2,tier:'Medium'},
+    {name:'Porur',val:1,tier:'Low'},
+  ],
+  'Hyderabad':[
+    {name:'Banjara Hills',val:5,tier:'High'},
+    {name:'Jubilee Hills',val:4,tier:'High'},
+    {name:'HITEC City',val:3,tier:'Medium'},
+    {name:'Gachibowli',val:2,tier:'Medium'},
+    {name:'LB Nagar',val:1,tier:'Low'},
+  ],
+  'Mumbai':[
+    {name:'Andheri',val:5,tier:'High'},
+    {name:'Bandra',val:4,tier:'High'},
+    {name:'Powai',val:3,tier:'Medium'},
+    {name:'Malad',val:2,tier:'Medium'},
+    {name:'Navi Mumbai',val:1,tier:'Low'},
+  ],
+  'Delhi':[
+    {name:'Connaught Place',val:5,tier:'High'},
+    {name:'Lajpat Nagar',val:4,tier:'High'},
+    {name:'Saket',val:3,tier:'Medium'},
+    {name:'Rohini',val:2,tier:'Medium'},
+    {name:'Dwarka',val:1,tier:'Low'},
+  ],
+  'Pune':[
+    {name:'Koregaon Park',val:5,tier:'High'},
+    {name:'Hinjewadi',val:4,tier:'High'},
+    {name:'Viman Nagar',val:3,tier:'Medium'},
+    {name:'Kothrud',val:2,tier:'Medium'},
+    {name:'Hadapsar',val:1,tier:'Low'},
+  ],
+  'Kolkata':[
+    {name:'Park Street',val:5,tier:'High'},
+    {name:'Salt Lake',val:4,tier:'High'},
+    {name:'New Town',val:3,tier:'Medium'},
+    {name:'Gariahat',val:2,tier:'Medium'},
+    {name:'Tollygunge',val:1,tier:'Low'},
+  ],
+  'Ahmedabad':[
+    {name:'Navrangpura',val:5,tier:'High'},
+    {name:'Satellite',val:4,tier:'High'},
+    {name:'Vastrapur',val:3,tier:'Medium'},
+    {name:'Bopal',val:2,tier:'Medium'},
+    {name:'Maninagar',val:1,tier:'Low'},
+  ],
+  'Jaipur':[
+    {name:'MI Road',val:5,tier:'High'},
+    {name:'Vaishali Nagar',val:4,tier:'High'},
+    {name:'Malviya Nagar',val:3,tier:'Medium'},
+    {name:'Mansarovar',val:2,tier:'Medium'},
+    {name:'Tonk Road',val:1,tier:'Low'},
+  ],
+  'Kochi':[
+    {name:'Edapally',val:5,tier:'High'},
+    {name:'MG Road',val:4,tier:'High'},
+    {name:'Kakkanad',val:3,tier:'Medium'},
+    {name:'Aluva',val:2,tier:'Medium'},
+    {name:'Tripunithura',val:1,tier:'Low'},
+  ],
+};
+async function init(){
+  try{
+    const u=await apiFetch('GET','/auth/me');
+    document.getElementById('user-av').textContent=(u.name||'R').charAt(0).toUpperCase();
+    document.getElementById('chip-name').textContent=(u.name||'Rider').split(' ')[0];
+    // Update daily goal labels
+    const dailyGoal = Math.round((u.target||5000)/22);
+    const goalLblSub = document.getElementById('daily-goal-label-sub');
+    const goalLblGauge = document.getElementById('daily-goal-label-gauge');
+    if(goalLblSub) goalLblSub.textContent = '₹' + dailyGoal.toLocaleString('en-IN');
+    if(goalLblGauge) goalLblGauge.textContent = '₹' + dailyGoal.toLocaleString('en-IN');
+    // Store for logistic model  
+    window._dailyGoal = dailyGoal;
+    // Populate city-aware zone dropdown for MLR estimator
+    const city=u.city||Object.keys(_PREDICT_ZONES)[0]||'';
+    const zones=_PREDICT_ZONES[city]||_PREDICT_ZONES[Object.keys(_PREDICT_ZONES)[0]]||[];
+    const zSel=document.getElementById('mlr-zone');
+    if(zSel){
+      zSel.innerHTML=zones.map((z,i)=>`<option value="${z.val}"${i===2?' selected':''}>${z.name} (${z.tier})</option>`).join('');
+    }
+    // Load shifts to compute real regression coefficients
+    try{
+      const shifts=await apiFetch('GET','/shifts');
+      if (!shifts || shifts.length < 3) {
+        showInsufficientDataGate();
+        return;
+      }
+      computeRegressionFromShifts(shifts,zones);
+      renderScatterFromShifts(shifts);
+      window._allShifts = shifts; // expose for smoothing chart
+    }catch(e2){
+      showInsufficientDataGate();
+      return;
+    }
+    // Update Zone Recommender best zone annotation
+    const rec=document.getElementById('zone-rec-best');
+    if(rec){const rateLabel=B1>0?`₹${B1}/hr avg`:'—';rec.textContent=`★ Best zone: ${zones[0].name} · ${rateLabel}`;}
+}catch(e){
+    if(e.message&&(e.message.includes('401')||e.message.toLowerCase().includes('unauthorized')||e.message.toLowerCase().includes('invalid token'))){
+      location.href='index.html';return;
+    }
+    const cached=localStorage.getItem('ss_user');
+    if(cached){try{const u=JSON.parse(cached);const av=document.getElementById('user-av');const cn=document.getElementById('chip-name');if(av)av.textContent=(u.name||'R').charAt(0).toUpperCase();if(cn)cn.textContent=(u.name||'Rider').split(' ')[0];}catch(_){}}
+  }
+  if(localStorage.getItem('ss_dark')==='1') document.body.classList.add('dark');
+  updateLR(); updateLogit(); updateMLR(); updateSmoothing();
+}
+
+/* ────────────────────────────────────────
+   1. Simple Linear Regression
+──────────────────────────────────────── */
+let B0=0, B1=0, R2=0;
+let _modelLoaded = false;
+
+function showInsufficientDataGate() {
+  // Hide analytics cards, chart container, formula box, slider
+  const analyticsCards = document.querySelectorAll('.card, .g-main, .g2, .sec-label');
+  analyticsCards.forEach(el => { el.style.display = 'none'; });
+  document.querySelector('.content').style.display = 'block';
+
+  // Remove existing gate if present
+  const existing = document.getElementById('insufficient-data-gate');
+  if (existing) existing.remove();
+
+  // Create hero component
+  const gate = document.createElement('div');
+  gate.id = 'insufficient-data-gate';
+  gate.style.cssText = `
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-height:60vh; padding:40px 24px; text-align:center;
+  `;
+  gate.innerHTML = `
+    <div style="background:var(--card-bg,var(--surface));border:1px solid var(--border);border-radius:20px;padding:48px 40px;max-width:480px;box-shadow:var(--shadow);">
+      <div style="font-size:48px;margin-bottom:16px">📊</div>
+      <h2 style="font-size:22px;font-weight:800;color:var(--ink);margin-bottom:12px;letter-spacing:-0.5px;">Not Enough Data Yet</h2>
+      <p style="font-size:14px;color:var(--ink-3);line-height:1.7;margin-bottom:28px;">
+        Upload at least 3 shifts to unlock predictions. The model needs a minimum of 3 data points to compute a reliable regression line.
+      </p>
+      <button onclick="triggerBulkUpload()" style="
+        background:var(--primary);color:#fff;border:none;border-radius:12px;
+        padding:14px 28px;font-family:var(--font);font-size:15px;font-weight:700;
+        cursor:pointer;width:100%;transition:opacity 0.2s;
+      " onmouseover="this.style.opacity=0.88" onmouseout="this.style.opacity=1">
+        📥 Upload Shift History (CSV)
+      </button>
+      <div style="font-size:12px;color:var(--ink-4);margin-top:16px;">
+        You can also log individual shifts from the <a href="shifts.html" style="color:var(--primary)">Shifts page</a>.
+      </div>
+    </div>
+  `;
+  document.querySelector('.content').prepend(gate);
+}
+
+function triggerBulkUpload() {
+  // Redirect to shifts page where bulk upload modal lives
+  location.href = 'shifts.html#import';
+}
+
+function renderScatterFromShifts(shifts) {
+  // Render real shift data into ALL .scatter-svg elements
+  // SVG[0] = LR scatter (viewBox 0 0 480 200): x axis 0–10h, y axis 0–1400
+  // SVG[1] = MLR zone-colour chart (viewBox 0 0 520 220): x axis 0–12h, y axis 0–1400
+  const svgConfigs = [
+    { maxHrs: 10, maxEarn: 1400, W: 470, H: 170, pad: 40, r: 5 },
+    { maxHrs: 12, maxEarn: 1400, W: 510, H: 175, pad: 44, r: 6 }
+  ];
+
+  const svgEls = document.querySelectorAll('.scatter-svg');
+  if (!svgEls.length) return;
+
+  svgEls.forEach((svgEl, idx) => {
+    // Always clear any existing dynamic dots
+    svgEl.querySelectorAll('circle.dot').forEach(c => c.remove());
+
+    // If no real data, leave SVG empty (axes/grid remain, no fake points)
+    if (!shifts || !shifts.length) return;
+
+    const cfg = svgConfigs[idx] || svgConfigs[0];
+    function xp(h) { return cfg.pad + (Math.min(h, cfg.maxHrs) / cfg.maxHrs) * (cfg.W - cfg.pad); }
+    function yp(e) { return cfg.H - (Math.min(e, cfg.maxEarn) / cfg.maxEarn) * (cfg.H - 10); }
+
+    const zoneColors = ['var(--primary)', 'var(--green)', 'var(--amber)', 'var(--red)'];
+    const zoneNames = {};
+    let zoneIdx = 0;
+
+    const refEl = svgEl.querySelector('.reg-line') || svgEl.querySelector('path');
+    shifts.filter(s => s.hours > 0 && s.earn > 0).forEach(s => {
+      const isOutlier = s.predicted && Math.abs(s.earn - s.predicted) > 0.3 * s.predicted;
+
+      // Assign a stable colour per zone for the MLR chart (idx 1), use outlier logic for LR chart (idx 0)
+      let fill;
+      if (idx === 1) {
+        const zoneName = s.zone || 'Default';
+        if (!(zoneName in zoneNames)) {
+          zoneNames[zoneName] = zoneColors[zoneIdx % zoneColors.length];
+          zoneIdx++;
+        }
+        fill = s.hours >= 8 ? 'var(--amber)' : zoneNames[zoneName];
+        if (s.hours >= 10) fill = 'var(--red)';
+      } else {
+        fill = isOutlier ? 'var(--red)' : 'var(--primary)';
+      }
+
+      const cx = xp(s.hours);
+      const cy = yp(s.earn);
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('class', 'dot');
+      c.setAttribute('cx', cx.toFixed(1));
+      c.setAttribute('cy', cy.toFixed(1));
+      c.setAttribute('r', String(cfg.r));
+      c.setAttribute('fill', fill);
+      c.setAttribute('opacity', isOutlier ? '0.85' : '0.7');
+      const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      titleEl.textContent = s.hours + 'h → ₹' + s.earn + (s.zone ? ' (' + s.zone + ')' : '');
+      c.appendChild(titleEl);
+      if (refEl) svgEl.insertBefore(c, refEl);
+      else svgEl.appendChild(c);
+    });
+  });
+}
+
+function computeRegressionFromShifts(shifts, zones){
+  const pts=shifts.filter(s=>s.earn>0&&s.hours>0);
+  if(pts.length<3) return; // not enough data, keep defaults
+  const n=pts.length;
+  const xs=pts.map(s=>s.hours), ys=pts.map(s=>s.earn);
+  const xBar=xs.reduce((a,b)=>a+b,0)/n;
+  const yBar=ys.reduce((a,b)=>a+b,0)/n;
+  const ssxy=xs.reduce((a,x,i)=>a+(x-xBar)*(ys[i]-yBar),0);
+  const ssxx=xs.reduce((a,x)=>a+(x-xBar)**2,0);
+  if(ssxx===0) return;
+  B1=Math.round(ssxy/ssxx);
+  B0=Math.round(yBar-B1*xBar);
+  // R²
+  const ssTot=ys.reduce((a,y)=>a+(y-yBar)**2,0);
+  const ssRes=pts.reduce((a,s)=>a+(s.earn-(B0+B1*s.hours))**2,0);
+  R2=ssTot>0?parseFloat((1-ssRes/ssTot).toFixed(2)):0.81;
+  // Update insight text with real rates
+  const pr=document.getElementById('peak-rate');
+  const dr=document.getElementById('diminish-rate');
+  if(pr) pr.textContent=B1;
+  if(dr) dr.textContent=Math.round(B1*0.36);
+  // Update formula display
+  const fEl=document.getElementById('lr-formula');
+  if(fEl) fEl.textContent=`Ŷ = ₹${B0} + ₹${B1} × Hours | R² = ${R2}  (n=${n} shifts)`;
+  // Update MLR formula box dynamically
+  const mlrFEl=document.getElementById('mlr-formula-box');
+  if(mlrFEl) mlrFEl.textContent=`Ŷ = ₹${B0} + ₹${B1}·h  (zone & time modifiers need more data)`;
+  // Update stat boxes
+  const iEl=document.getElementById('lr-intercept');
+  const sEl=document.getElementById('lr-slope');
+  if(iEl) iEl.textContent='₹'+B0;
+  if(sEl) sEl.textContent='₹'+B1+'/h';
+  // Update R² gauge
+  const r2slider=document.getElementById('r2-slider');
+  if(r2slider){r2slider.value=Math.round(R2*100);updateR2();}
+}
+function updateLR(){
+  const h=parseFloat(document.getElementById('hrs-slider').value);
+  if(!B1){
+    document.getElementById('lr-result').textContent='—';
+    document.getElementById('lr-formula').textContent='Log at least 3 shifts to activate';
+    document.getElementById('lr-ci').textContent='—';
+    return;
+  }
+  const pred=Math.round(B0+B1*h);
+  const ci=Math.round(45+h*3.5);
+  document.getElementById('lr-result').textContent='₹'+pred;
+  document.getElementById('lr-formula').textContent=`Ŷ = ₹${B0} + ₹${B1} × ${h}h = ₹${pred}  |  R² = ${R2}`;
+  document.getElementById('lr-ci').textContent='±₹'+ci;
+  // Move prediction marker on SVG (scale: x=44 at 1h, 470 at 12h → 38.7px per hour)
+  const xPos=44+((h-1)/11)*426;
+  const yPos=170-((pred/1200)*160);
+  const dot=document.getElementById('pred-dot');
+  const vline=document.getElementById('pred-vline');
+  if(dot){dot.setAttribute('cx',xPos.toFixed(1));dot.setAttribute('cy',Math.max(10,yPos).toFixed(1));}
+  if(vline){vline.setAttribute('x1',xPos.toFixed(1));vline.setAttribute('x2',xPos.toFixed(1));vline.setAttribute('y1',Math.max(10,yPos).toFixed(1));}
+}
+
+/* ────────────────────────────────────────
+   2. R² Gauge
+──────────────────────────────────────── */
+function updateR2(){
+  const v=parseInt(document.getElementById('r2-slider').value);
+  const circ=302; // 2π×48
+  const fill=Math.round((v/100)*circ);
+  document.getElementById('r2-arc').setAttribute('stroke-dasharray',fill+' '+(circ-fill));
+  document.getElementById('r2-gauge-val').textContent=v+'%';
+  const arc=document.getElementById('r2-arc');
+  const badge=document.getElementById('r2-badge');
+  if(v>=70){arc.setAttribute('stroke','var(--green)');badge.className='badge up';badge.textContent='High predictability';}
+  else if(v>=40){arc.setAttribute('stroke','var(--amber)');badge.className='badge flat';badge.textContent='Moderate variability';}
+  else{arc.setAttribute('stroke','var(--red)');badge.className='badge down';badge.textContent='High volatility — diversify zones';}
+}
+
+/* ────────────────────────────────────────
+   3. Logistic Regression
+──────────────────────────────────────── */
+function sigmoid(z){ return 1/(1+Math.exp(-z)); }
+function updateLogit(){
+  const h=parseFloat(document.getElementById('prob-hours').value);
+  const z=parseInt(document.getElementById('prob-zone').value);
+  const eve=document.getElementById('prob-eve').checked?1:0;
+  document.getElementById('ph-val').textContent=h+'h';
+  document.getElementById('pz-val').textContent=z;
+  // Default logit model — recalibrated from user's actual shift history
+  const logit=((window._logitIntercept||-3.2) + (window._logitHours||0.6)*h + (window._logitZone||0.4)*z + (window._logitEvening||0.8)*eve);
+  const prob=Math.round(sigmoid(logit)*100);
+  // Update gauge arc (circumference = 2π×60 ≈ 377)
+  const fill=Math.round((prob/100)*377);
+  const arc=document.getElementById('prob-arc');
+  arc.setAttribute('stroke-dasharray',fill+' '+(377-fill));
+  document.getElementById('prob-val').textContent=prob+'%';
+  const badge=document.getElementById('prob-badge');
+  if(prob>=75){arc.setAttribute('stroke','var(--green)');document.getElementById('prob-val').style.color='var(--green)';badge.className='badge up';badge.textContent='Great odds — head out now!';}
+  else if(prob>=50){arc.setAttribute('stroke','var(--amber)');document.getElementById('prob-val').style.color='var(--amber)';badge.className='badge flat';badge.textContent='Moderate — try a higher-value zone';}
+  else{arc.setAttribute('stroke','var(--red)');document.getElementById('prob-val').style.color='var(--red)';badge.className='badge down';badge.textContent='Low chance — add more hours or switch zone';}
+  document.getElementById('logit-formula').textContent=`P(success) = sigmoid(${logit.toFixed(2)}) = ${prob}%`;
+  // Move sigmoid dot
+  const xPos=40+((h-1)/10)*270;
+  const yPos=175-prob*1.65;
+  const dot=document.getElementById('sig-dot');
+  const lbl=document.getElementById('sig-label');
+  if(dot){dot.setAttribute('cx',xPos.toFixed(1));dot.setAttribute('cy',Math.max(12,yPos).toFixed(1));}
+  if(lbl){lbl.setAttribute('x',(xPos+3).toFixed(1));lbl.setAttribute('y',Math.max(22,yPos-6).toFixed(1));lbl.textContent=prob+'%';}
+}
+
+/* ────────────────────────────────────────
+   4. Multiple Linear Regression — Platform Optimizer
+──────────────────────────────────────── */
+const PLATFORM_META={
+  'Swiggy':  {emoji:'🛵', color:'var(--primary)'},
+  'Zomato':  {emoji:'🍕', color:'#E02020'},
+  'Uber Eats':{emoji:'🚗', color:'#000'},
+  'Uber':    {emoji:'🚗', color:'#000'},
+  'Ola':     {emoji:'🚕', color:'#16A34A'},
+  'Dunzo':   {emoji:'📦', color:'var(--green)'},
+  'Blinkit': {emoji:'⚡', color:'var(--amber)'},
+};
+function updateMLR(){
+  const h=parseFloat(document.getElementById('mlr-hours').value)||5;
+  const base=B0+B1*h;
+  // Build platform list only from platforms the user has actually worked with
+  const usedPlatforms=window._allShifts&&window._allShifts.length
+    ? [...new Set(window._allShifts.map(s=>s.platform).filter(Boolean))]
+    : ['Swiggy','Zomato'];
+  // Compute per-platform rate from real data
+  const platEarnings={};
+  (window._allShifts||[]).forEach(s=>{
+    if(!s.platform||!s.hours||!s.earn)return;
+    if(!platEarnings[s.platform])platEarnings[s.platform]={earn:0,hours:0};
+    platEarnings[s.platform].earn+=s.earn;
+    platEarnings[s.platform].hours+=s.hours;
+  });
+  const avgRate=Object.values(platEarnings).reduce((a,v)=>a+(v.hours?v.earn/v.hours:0),0)/Math.max(Object.keys(platEarnings).length,1);
+  const results=usedPlatforms.map(name=>{
+    const meta=PLATFORM_META[name]||{emoji:'🛵',color:'var(--ink-3)'};
+    const personalRate=platEarnings[name]&&platEarnings[name].hours?(platEarnings[name].earn/platEarnings[name].hours):avgRate;
+    const pred=Math.round(personalRate*h);
+    return {...meta, name, pred};
+  });
+  results.sort((a,b)=>b.pred-a.pred);
+  const maxPred=results[0].pred;
+  document.getElementById('mlr-results').innerHTML=results.map((p,i)=>`
+    <div class="plat-row${i===0?' best':''}">
+      <div style="font-size:18px">${p.emoji}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">${p.name} ${i===0?'<span style="font-size:9px;background:var(--green);color:#fff;padding:2px 6px;border-radius:4px;margin-left:4px">BEST</span>':''}</div>
+        <div class="plat-bar-track" style="margin-top:5px">
+          <div class="plat-bar-fill" style="width:${Math.round((p.pred/maxPred)*100)}%;background:${i===0?'var(--green)':'var(--border-d)'}"></div>
+        </div>
+      </div>
+      <div style="font-size:15px;font-weight:800;color:${i===0?'var(--green)':'var(--ink)'}">₹${p.pred}</div>
+    </div>`).join('');
+}
+
+/* ────────────────────────────────────────
+   5. Exponential Smoothing
+──────────────────────────────────────── */
+function getRealEarningsArray(shifts) {
+  // Return last 10 shift earnings sorted by date ascending — no fake data
+  const sorted = (shifts||[])
+    .filter(s=>s.earn>0)
+    .sort((a,b)=>(a.shift_date||'').localeCompare(b.shift_date||''))
+    .slice(-10)
+    .map(s=>s.earn);
+  return sorted;
+}
+function expSmooth(data,alpha){
+  let s=data[0];
+  return data.map(x=>{s=alpha*x+(1-alpha)*s;return Math.round(s);});
+}
+function updateSmoothing(){
+  const alpha=parseFloat(document.getElementById('alpha-slider').value);
+  document.getElementById('alpha-val').textContent=alpha.toFixed(1);
+  document.getElementById('alpha-insight-val').textContent=alpha.toFixed(1);
+
+  const rawData = getRealEarningsArray(window._allShifts||[]);
+
+  if(!rawData.length){
+    ['smooth-today','smooth-next'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='—';});
+    const fEl=document.getElementById('smooth-formula');if(fEl)fEl.textContent='Log shifts to see forecast';
+    renderSmoothingChart([],[],alpha);
+    const insight=document.getElementById('alpha-insight');
+    if(insight)insight.textContent='Log at least 2 shifts to activate the smoothing forecast.';
+    return;
+  }
+
+  const smoothed=expSmooth(rawData,alpha);
+  const today=smoothed[smoothed.length-1];
+  const next=Math.round(alpha*rawData[rawData.length-1]+(1-alpha)*today);
+  document.getElementById('smooth-today').textContent='₹'+today;
+  document.getElementById('smooth-next').textContent='₹'+next;
+  document.getElementById('smooth-formula').textContent=
+    `S = ${alpha.toFixed(1)} × ₹${rawData[rawData.length-1]} + ${(1-alpha).toFixed(1)} × ₹${today} = ₹${next}`;
+  renderSmoothingChart(rawData,smoothed,alpha);
+  const insight=document.getElementById('alpha-insight');
+  if(insight){
+    if(alpha<=0.3) insight.textContent='Heavy smoothing — reacts slowly, good for very stable patterns.';
+    else if(alpha<=0.6) insight.textContent='Balanced — weights recent shifts moderately. Best for most riders.';
+    else insight.textContent='Highly reactive — responds fast to swings. Use if your income changes daily.';
+  }
+}
+
+function renderSmoothingChart(rawData, smoothed, alpha){
+  const rawLine=document.getElementById('raw-line');
+  const smoothLine=document.getElementById('smooth-line');
+  const forecastDot=document.getElementById('smooth-forecast-dot');
+  // Remove old raw dots
+  const svg=rawLine?rawLine.closest('svg'):null;
+  if(svg) svg.querySelectorAll('circle.smooth-dot').forEach(c=>c.remove());
+  if(!rawData.length){
+    if(rawLine) rawLine.setAttribute('points','');
+    if(smoothLine) smoothLine.setAttribute('points','');
+    if(forecastDot) forecastDot.setAttribute('cx','-99');
+    return;
+  }
+  const n=rawData.length;
+  const W=414,H=145,pad=44;
+  const maxVal=Math.max(...rawData,...smoothed,400);
+  function xp(i){return pad+(i/(n-1))*(W-pad);}
+  function yp(v){return H-(v/maxVal)*(H-20);}
+  const rawPts=rawData.map((v,i)=>xp(i).toFixed(1)+','+yp(v).toFixed(1)).join(' ');
+  const smPts=smoothed.map((v,i)=>xp(i).toFixed(1)+','+yp(v).toFixed(1)).join(' ');
+  if(rawLine) rawLine.setAttribute('points',rawPts);
+  if(smoothLine) smoothLine.setAttribute('points',smPts);
+  // Place forecast dot at last smoothed point
+  const lx=xp(n-1),ly=yp(smoothed[n-1]);
+  if(forecastDot){forecastDot.setAttribute('cx',lx.toFixed(1));forecastDot.setAttribute('cy',ly.toFixed(1));}
+  // Draw raw data dots
+  if(svg){
+    rawData.forEach((v,i)=>{
+      const c=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('class','smooth-dot');
+      c.setAttribute('cx',xp(i).toFixed(1));
+      c.setAttribute('cy',yp(v).toFixed(1));
+      c.setAttribute('r','3');
+      c.setAttribute('fill','var(--ink-3)');
+      const t=document.createElementNS('http://www.w3.org/2000/svg','title');
+      t.textContent='₹'+v;c.appendChild(t);
+      svg.insertBefore(c,forecastDot||null);
+    });
+  }
+}
+
+/* ────────────────────────────────────────
+   Utilities
+──────────────────────────────────────── */
+function toggleDark(){
+  document.body.classList.toggle('dark');
+  localStorage.setItem('ss_dark',document.body.classList.contains('dark')?'1':'0'); // dark pref stored locally
+}
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+(type||'ok')+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function signOut(){localStorage.removeItem("ss_token");localStorage.removeItem("ss_user");window.location.href="index.html";}
+init();
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  ShiftSense v5 — Dynamic Analytics Engine (API v2 Integration)
+//  Replaces ALL hardcoded constants (B0=42, B1=138, Rate=180)
+//  with values computed live from user's actual shift history.
+// ═══════════════════════════════════════════════════════════════
+
+let _model = { beta0: 0, beta1: 0, r_squared: 0, is_fallback: true, n: 0 };
+let _forecasts = [];
+let _platforms = [];
+let _performance = {};
+let _zoneRankings = [];
+
+// ── v2 API helper ─────────────────────────────────────────────
+async function fetchV2(path) {
+  const v2Base = window.SS_CONFIG.API_V2;
+  const r = await fetch(v2Base + path, {
+    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ss_token') || '') }
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || data.error || 'v2 API error');
+  return data;
+}
+
+// ── Startup: Load all analytics from v2 API ───────────────────
+async function loadAnalytics() {
+  try {
+    // First check the regression endpoint directly
+    let regressionData;
+    try {
+      regressionData = await fetchV2('/analytics/regression');
+    } catch (err) {
+      showInsufficientDataGate();
+      return;
+    }
+
+    // Check for insufficient_data from regression endpoint
+    if (regressionData && regressionData.status === 'insufficient_data') {
+      showInsufficientDataGate();
+      return;
+    }
+
+    const dash = await fetchV2('/analytics/dashboard');
+
+    // Check dashboard model_status
+    if (dash.model_status === 'insufficient_data') {
+      showInsufficientDataGate();
+      return;
+    }
+
+    _model = dash.regression;
+    _performance = dash.performance;
+    _platforms = dash.platform_rankings;
+
+    // Update formula display dynamically from API response
+    const r2pct = (_model.r_squared * 100).toFixed(0);
+    const formulaEl = document.getElementById('lr-formula');
+    if (formulaEl) {
+      formulaEl.textContent = `Ŷ = ₹${_model.beta0} + ₹${_model.beta1} × Hours | R² = ${_model.r_squared}`;
+    }
+
+    // Also update the MLR formula box in the Platform Optimizer section
+    const mlrFormulaEl = document.querySelector('.formula-box:not(#lr-formula)');
+    if (mlrFormulaEl && _model.beta0 !== undefined) {
+      mlrFormulaEl.textContent = `Ŷ = ₹${_model.beta0} + ₹${_model.beta1}·h  (zone & time modifiers need more data)`;
+    }
+
+    // Update diminishing returns annotation dynamically
+    const peakRateEl = document.getElementById('peak-rate');
+    const diminishRateEl = document.getElementById('diminish-rate');
+    if (peakRateEl && _model.beta1) peakRateEl.textContent = _model.beta1;
+    if (diminishRateEl && _model.beta1) diminishRateEl.textContent = Math.round(_model.beta1 * 0.36);
+
+    // Sync slider prediction
+    updateLR();
+
+    // Load forecast
+    const fData = await fetchV2('/analytics/forecast');
+    _forecasts = fData.forecasts || [];
+    renderForecast();
+
+    // Load zone rankings
+    const hod = new Date().getHours();
+    const zData = await fetchV2(`/analytics/zones?hour_of_day=${hod}`);
+    _zoneRankings = zData.rankings || [];
+    renderZoneTree();
+
+    // Update performance signal
+    renderPerformance();
+
+    // Platform ranking
+    renderPlatforms();
+
+  } catch (err) {
+    console.warn('[v2 Analytics] Not available, using static defaults:', err.message);
+    showInsufficientDataGate();
+  }
+}
+
+// ── OLS: Earnings Estimator ───────────────────────────────────
+function updateLR() {
+  const hrs = parseFloat(document.getElementById('hrs-slider')?.value || 5);
+  const beta0 = _model.beta0;
+  const beta1 = _model.beta1;
+  const se = _model.std_error || 0;
+  const n = _model.n || 0;
+
+  const el = document.getElementById('lr-result');
+  if (!beta0 || !beta1) {
+    if (el) el.textContent = '—';
+    return;
+  }
+  const predicted = Math.max(0, beta0 + beta1 * hrs);
+  const margin = 2 * se * Math.sqrt(1 + 1 / Math.max(n, 1));
+
+  // Update result display
+  const el = document.getElementById('lr-result');
+  if (el) el.textContent = '₹' + Math.round(predicted).toLocaleString('en-IN');
+
+  // Update scatter plot regression line
+  const W = 470, H = 170, pad = 44;
+  const maxHrs = 12, maxEarn = 1400;
+  function xp(h) { return pad + (h / maxHrs) * (W - pad); }
+  function yp(e) { return H - (e / maxEarn) * (H - 10); }
+
+  const x1 = 0, x2 = maxHrs;
+  const y1 = beta0 + beta1 * x1;
+  const y2 = beta0 + beta1 * x2;
+
+  const regLine = document.getElementById('reg-line');
+  const ciBand = document.getElementById('ci-band');
+  const ciUpper = document.getElementById('ci-upper');
+  const ciLower = document.getElementById('ci-lower');
+  const predDot = document.getElementById('pred-dot');
+  const predLine = document.getElementById('pred-line');
+
+  if (regLine) {
+    regLine.setAttribute('x1', xp(x1)); regLine.setAttribute('y1', yp(Math.max(0,y1)));
+    regLine.setAttribute('x2', xp(x2)); regLine.setAttribute('y2', yp(Math.min(maxEarn, y2)));
+  }
+
+  const ciM = margin * 0.6;
+  if (ciBand) {
+    ciBand.setAttribute('points',
+      `${xp(x1)},${yp(Math.min(maxEarn,y1+ciM))} ${xp(x2)},${yp(Math.min(maxEarn,y2+ciM))} ${xp(x2)},${yp(Math.max(0,y2-ciM))} ${xp(x1)},${yp(Math.max(0,y1-ciM))}`);
+  }
+  if (ciUpper) {
+    ciUpper.setAttribute('x1', xp(x1)); ciUpper.setAttribute('y1', yp(Math.min(maxEarn,y1+ciM)));
+    ciUpper.setAttribute('x2', xp(x2)); ciUpper.setAttribute('y2', yp(Math.min(maxEarn,y2+ciM)));
+  }
+  if (ciLower) {
+    ciLower.setAttribute('x1', xp(x1)); ciLower.setAttribute('y1', yp(Math.max(0,y1-ciM)));
+    ciLower.setAttribute('x2', xp(x2)); ciLower.setAttribute('y2', yp(Math.max(0,y2-ciM)));
+  }
+  if (predDot) {
+    predDot.setAttribute('cx', xp(hrs));
+    predDot.setAttribute('cy', yp(Math.min(maxEarn, Math.max(0, predicted))));
+  }
+  if (predLine) {
+    predLine.setAttribute('x1', xp(hrs)); predLine.setAttribute('y1', yp(0));
+    predLine.setAttribute('x2', xp(hrs)); predLine.setAttribute('y2', yp(Math.min(maxEarn, Math.max(0,predicted))));
+  }
+
+  // Update stats boxes
+  updateEl('stat-b0', '₹' + Math.round(beta0));
+  updateEl('stat-b1', '₹' + Math.round(beta1) + '/h');
+  updateEl('stat-r2', (_model.r_squared * 100).toFixed(1) + '%');
+  updateEl('stat-n', _model.n || '—');
+  updateEl('stat-se', _model.std_error ? '₹' + Math.round(_model.std_error) : '—');
+}
+
+function updateEl(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ── Exponential Smoothing Forecast ───────────────────────────
+function renderForecast() {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const container = document.getElementById('forecast-bars');
+  if (!container || !_forecasts.length) return;
+
+  const maxF = Math.max(..._forecasts.map(f => f.forecast), 1);
+  const today = days[(new Date().getDay())];
+
+  container.innerHTML = _forecasts.map(f => {
+    const pct = Math.round((f.forecast / maxF) * 100);
+    const isToday = f.day === today;
+    const si = f.seasonal_index > 1.05 ? '🔥' : f.seasonal_index < 0.95 ? '🌙' : '';
+    return `
+      <div class="forecast-col${isToday ? ' forecast-today' : ''}">
+        <div class="forecast-bar-wrap">
+          <div class="forecast-bar" style="height:${pct}%;background:${isToday ? 'var(--primary)' : 'var(--border)'}"></div>
+        </div>
+        <div class="forecast-day">${f.day}${si}</div>
+        <div class="forecast-val">₹${Math.round(f.forecast).toLocaleString('en-IN')}</div>
+        <div class="forecast-si" title="Seasonal index">×${f.seasonal_index}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Performance Signal (Z-score) ──────────────────────────────
+function renderPerformance() {
+  const p = _performance;
+  if (!p || !p.z_score) return;
+
+  const z = p.z_score || 0;
+  const signal = p.signal || 'neutral';
+  const colors = { excellent:'var(--green)', good:'var(--green)', neutral:'var(--ink-3)', below_average:'var(--amber)', poor:'var(--red)' };
+  const labels = { excellent:'Excellent 🔥', good:'Above Average ✓', neutral:'On Track ●', below_average:'Below Average ↓', poor:'Low Earnings ↘' };
+
+  updateEl('perf-zscore', z.toFixed(2));
+  updateEl('perf-signal', labels[signal] || signal);
+  updateEl('perf-mean', '₹' + Math.round(p.mean_rate) + '/h');
+  updateEl('perf-std', '±₹' + Math.round(p.std_dev) + '/h');
+  updateEl('perf-pct', p.percentile + 'th percentile');
+  updateEl('perf-current', p.current_rate ? '₹' + Math.round(p.current_rate) + '/h' : '—');
+
+  const signalEl = document.getElementById('perf-signal');
+  if (signalEl) signalEl.style.color = colors[signal] || 'var(--ink-3)';
+
+  // Normal distribution arc
+  const arc = document.getElementById('perf-arc');
+  if (arc) {
+    const pct = Math.min(100, Math.max(0, p.percentile));
+    const dashLen = (pct / 100) * 2 * Math.PI * 40;
+    arc.setAttribute('stroke-dasharray', `${dashLen.toFixed(1)} 999`);
+    arc.setAttribute('stroke', colors[signal] || 'var(--ink-3)');
+  }
+}
+
+// ── CART Zone Rankings ────────────────────────────────────────
+function renderZoneTree() {
+  const container = document.getElementById('zone-tree-rows');
+  if (!container || !_zoneRankings.length) return;
+
+  const maxScore = Math.max(..._zoneRankings.map(z => z.recommendation_score), 1);
+
+  container.innerHTML = _zoneRankings.slice(0, 8).map((z, i) => {
+    const pct = Math.round((z.recommendation_score / maxScore) * 100);
+    const demandCol = { high: 'var(--green)', medium: 'var(--amber)', low: 'var(--ink-4)' }[z.demand] || 'var(--ink-4)';
+    const badge = i === 0 ? '<span style="color:var(--green);font-weight:700">★ Best</span>' :
+                  i === 1 ? '<span style="color:var(--primary)">✦ 2nd</span>' : `#${i+1}`;
+    const hist = z.historical_rate ? `₹${Math.round(z.historical_rate)}/h (${z.shift_count} shifts)` : 'No history — using model';
+    return `
+      <div class="zone-tree-row">
+        <div class="zone-rank">${badge}</div>
+        <div class="zone-info">
+          <div class="zone-name">${z.zone}</div>
+          <div class="zone-meta">${hist}</div>
+        </div>
+        <div class="zone-bar-wrap">
+          <div class="zone-bar" style="width:${pct}%;background:${demandCol}"></div>
+        </div>
+        <div class="zone-rate">₹${Math.round(z.expected_rate)}/h</div>
+        <div class="zone-demand" style="color:${demandCol}">${z.demand}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Platform Rankings (MLR) ───────────────────────────────────
+function renderPlatforms() {
+  const container = document.getElementById('platform-opt-rows');
+  if (!container || !_platforms.length) return;
+
+  const maxRate = Math.max(..._platforms.map(p => p.rate_per_hour), 1);
+
+  container.innerHTML = _platforms.map((p, i) => {
+    const pct = Math.round((p.rate_per_hour / maxRate) * 100);
+    const isBest = i === 0;
+    return `
+      <div class="plat-row${isBest ? ' best' : ''}">
+        <div style="min-width:80px;font-weight:700;font-size:13px">${p.platform}</div>
+        <div class="plat-bar-track"><div class="plat-bar-fill" style="width:${pct}%;background:${isBest ? 'var(--green)' : 'var(--primary)'}"></div></div>
+        <div style="min-width:80px;text-align:right;font-size:12px">₹${Math.round(p.rate_per_hour)}/h</div>
+        <div style="min-width:50px;text-align:right;font-size:11px;color:var(--ink-4)">${p.shift_count} shifts</div>
+        ${isBest ? '<span style="font-size:11px;color:var(--green);font-weight:700;margin-left:4px">Best ✓</span>' : ''}
+      </div>`;
+  }).join('');
+}
+
+// ── Init ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Wait for config.js to set up API helpers
+  setTimeout(() => loadAnalytics().catch(console.warn), 300);
+});
+</script>
+
+</body>
+</html>

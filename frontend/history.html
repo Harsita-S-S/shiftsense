@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShiftSense — History</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.history-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:20px;}
+.filter-chip{padding:6px 14px;border-radius:100px;font-family:var(--font);font-size:12px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--ink-3);cursor:pointer;transition:all 0.18s;}
+.filter-chip:hover{border-color:var(--primary-m);color:var(--primary);}
+.filter-chip.active{border-color:var(--primary);background:var(--primary-l);color:var(--primary-d);}
+.history-table{width:100%;border-collapse:collapse;}
+.history-table th{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--ink-4);padding:8px 14px;text-align:left;border-bottom:1.5px solid var(--border);white-space:nowrap;}
+.history-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink-2);vertical-align:middle;}
+.history-table tr:last-child td{border-bottom:none;}
+.history-table tr:hover td{background:var(--primary-l);}
+.td-zone{font-weight:600;color:var(--ink);}
+.td-earn{font-weight:800;color:var(--ink);font-size:14px;}
+.td-vs.above{color:var(--green);font-weight:600;}
+.td-vs.below{color:var(--red);font-weight:600;}
+.anomaly-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--red-l);color:var(--red-t);border:1px solid var(--red-m);text-transform:uppercase;letter-spacing:0.3px;margin-left:6px;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--ink-3);text-align:center;}
+.empty-ico{font-size:48px;margin-bottom:16px;opacity:0.4;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sb-logo"><img src="logo.png" style="width:22px;height:22px;object-fit:contain;border-radius:5px;" alt="ShiftSense"></div>
+    <button class="nav-btn" title="Dashboard" onclick="location.href='dashboard.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+    <button class="nav-btn" title="Shifts" onclick="location.href='shifts.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></button>
+    <button class="nav-btn" title="Zones" onclick="location.href='zones.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg></button>
+    <button class="nav-btn" title="Analytics" onclick="location.href='analytics.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></button>
+    <button class="nav-btn active" title="History" onclick="location.href='history.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
+    <button class="nav-btn" title="Predict &amp; Model" onclick="location.href='predict.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></button>
+    <div class="sb-bottom">
+      <button class="nav-btn" title="Toggle Dark" onclick="document.body.classList.toggle('dark')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg></button>
+      <button class="nav-btn" title="Sign Out" onclick="signOut()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="tb-title"><h1>Shift History</h1><p>All your logged rides and earnings</p></div>
+      <div class="tb-right">
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">
+          <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M9 2v10M4 7l5 5 5-5"/><path d="M2 14h14"/></svg>
+          Export CSV
+        </button>
+        <div class="profile-chip" onclick="location.href='index.html'">
+          <div class="avatar" id="user-av">R</div>
+          <div><div class="chip-name" id="chip-name">Rider</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- Summary stats -->
+      <div class="stats-row" id="stats-row">
+        <div class="kpi"><div class="kpi-lbl">Total Shifts</div><div class="kpi-val" id="stat-shifts">0</div></div>
+        <div class="kpi"><div class="kpi-lbl">Total Earned</div><div class="kpi-val" id="stat-earned">₹0</div></div>
+        <div class="kpi"><div class="kpi-lbl">Total Hours</div><div class="kpi-val" id="stat-hours">0h</div></div>
+        <div class="kpi"><div class="kpi-lbl">Avg ₹/Hour</div><div class="kpi-val" id="stat-rate">₹0</div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="history-filters">
+        <span style="font-size:11px;font-weight:700;color:var(--ink-4);text-transform:uppercase;letter-spacing:0.5px;">Filter:</span>
+        <button class="filter-chip active" onclick="applyFilter('all',this)">All Shifts</button>
+        <button class="filter-chip" onclick="applyFilter('above',this)">Above Forecast</button>
+        <button class="filter-chip" onclick="applyFilter('below',this)">Below Forecast</button>
+        <button class="filter-chip" onclick="applyFilter('anomaly',this)">Unusual Shifts</button>
+        <button class="filter-chip" id="zone-chip-1" onclick="applyFilter('zone1',this)" style="display:none"></button>
+        <button class="filter-chip" id="zone-chip-2" onclick="applyFilter('zone2',this)" style="display:none"></button>
+        <div style="margin-left:auto">
+          <select class="sel ni" style="width:140px;padding:6px 12px;font-size:12px" id="sort-sel" onchange="render()">
+            <option value="date">Newest First</option>
+            <option value="earn-desc">Highest Earnings</option>
+            <option value="earn-asc">Lowest Earnings</option>
+            <option value="rate">Best ₹/Hour</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card card-flush">
+        <table class="history-table" id="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Zone</th>
+              <th>Platform</th>
+              <th>Hours</th>
+              <th>Orders</th>
+              <th>Earned</th>
+              <th>Forecast</th>
+              <th>vs Forecast</th>
+              <th>₹/Hour</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state" style="display:none">
+          <div class="empty-ico">📋</div>
+          <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px">No shifts match this filter</div>
+          <div style="font-size:13px">Try a different filter or <a href="shifts.html" style="color:var(--primary);font-weight:600">log a shift</a></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// ── API helpers ──────────────────────────────────────────────────
+const API=window.SS_CONFIG.API;
+function token(){return localStorage.getItem('ss_token');}
+async function apiFetch(method,path,body){
+  const opts={method,headers:{'Content-Type':'application/json'}};
+  if(token())opts.headers['Authorization']='Bearer '+token();
+  if(body)opts.body=JSON.stringify(body);
+  const r=await fetch(API+path,opts);
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.error||'API error');
+  return data;
+}
+if(!token()){location.href='index.html';}
+
+let activeFilter='all',allShifts=[],_topZone1='',_topZone2='';
+function getUser(){return JSON.parse(localStorage.getItem('ss_user')||'null');}
+
+async function init(){
+  try{
+    const u=await apiFetch('GET','/auth/me');
+    document.getElementById('user-av').textContent=(u.name||'R').charAt(0).toUpperCase();
+    document.getElementById('chip-name').textContent=(u.name||'Rider').split(' ')[0];
+}catch(e){
+    if(e.message&&(e.message.includes('401')||e.message.toLowerCase().includes('unauthorized')||e.message.toLowerCase().includes('invalid token'))){
+      location.href='index.html';return;
+    }
+    const cached=localStorage.getItem('ss_user');
+    if(cached){try{const u=JSON.parse(cached);const av=document.getElementById('user-av');const cn=document.getElementById('chip-name');if(av)av.textContent=(u.name||'R').charAt(0).toUpperCase();if(cn)cn.textContent=(u.name||'Rider').split(' ')[0];}catch(_){}}
+  }
+  if(localStorage.getItem('ss_dark')==='1')document.body.classList.add('dark');
+  loadShifts();
+}
+
+async function loadShifts(){
+  try{
+    allShifts=await apiFetch('GET','/shifts');
+  }catch(e){allShifts=[];}
+  // Set top zone filter chips based on user's city
+  try{
+    const cityZonesMap={
+      'Bengaluru':['Koramangala','Indiranagar'],
+      'Coimbatore':['RS Puram','Gandhipuram'],
+      'Chennai':['Anna Nagar','T Nagar'],
+      'Hyderabad':['Banjara Hills','Jubilee Hills'],
+      'Mumbai':['Andheri','Bandra'],
+      'Delhi':['Connaught Place','Lajpat Nagar'],
+      'Pune':['Koregaon Park','Hinjewadi'],
+      'Kolkata':['Park Street','Salt Lake'],
+      'Ahmedabad':['Navrangpura','Satellite'],
+      'Jaipur':['MI Road','Vaishali Nagar'],
+      'Kochi':['Edapally','MG Road'],
+    };
+    const userCity=(getUser()||{}).city||Object.keys(cityZonesMap)[0]||'';
+    const topZones=cityZonesMap[userCity]||cityZonesMap[Object.keys(cityZonesMap)[0]]||[];
+    _topZone1=topZones[0]; _topZone2=topZones[1];
+    const c1=document.getElementById('zone-chip-1');
+    const c2=document.getElementById('zone-chip-2');
+    if(c1){c1.textContent=_topZone1;c1.style.display='';}
+    if(c2){c2.textContent=_topZone2;c2.style.display='';}
+  }catch(e){}
+  updateStats();
+  render();
+}
+
+function updateStats(){
+  const s=allShifts;
+  const totalEarned=s.reduce((a,x)=>a+x.earn,0);
+  const totalHours=s.reduce((a,x)=>a+x.hours,0);
+  document.getElementById('stat-shifts').textContent=s.length;
+  document.getElementById('stat-earned').textContent='₹'+totalEarned.toLocaleString('en-IN');
+  document.getElementById('stat-hours').textContent=totalHours.toFixed(1)+'h';
+  document.getElementById('stat-rate').textContent='₹'+Math.round(totalEarned/totalHours);
+}
+
+function applyFilter(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function render(){
+  const sort=document.getElementById('sort-sel').value;
+  let data=[...allShifts];
+
+  // Filter
+  if(activeFilter==='above') data=data.filter(s=>s.earn>=s.predicted);
+  else if(activeFilter==='below') data=data.filter(s=>s.earn<s.predicted);
+  else if(activeFilter==='anomaly') data=data.filter(s=>Math.abs(s.earn-s.predicted)/s.predicted>0.2);
+  else if(activeFilter==='zone1') data=data.filter(s=>s.zone===_topZone1);
+  else if(activeFilter==='zone2') data=data.filter(s=>s.zone===_topZone2);
+
+  // Sort
+  if(sort==='earn-desc') data.sort((a,b)=>b.earn-a.earn);
+  else if(sort==='earn-asc') data.sort((a,b)=>a.earn-b.earn);
+  else if(sort==='rate') data.sort((a,b)=>(b.earn/b.hours)-(a.earn/a.hours));
+
+  const body=document.getElementById('history-body');
+  const empty=document.getElementById('empty-state');
+
+  if(!data.length){
+    body.innerHTML='';
+    empty.style.display='flex';
+    return;
+  }
+  empty.style.display='none';
+
+  // Calculate mean for z-score anomaly
+  const avg=allShifts.reduce((s,x)=>s+(x.earn/x.hours),0)/allShifts.length;
+  const std=Math.sqrt(allShifts.reduce((s,x)=>s+Math.pow((x.earn/x.hours)-avg,2),0)/allShifts.length);
+
+  body.innerHTML=data.map(s=>{
+    const diff=s.earn-s.predicted;
+    const cls=diff>=0?'above':'below';
+    const vs=diff>=0?`▲ +₹${diff}`:`▼ -₹${Math.abs(diff)}`;
+    const rate=Math.round(s.earn/s.hours);
+    const z=(rate-avg)/std;
+    const isAnomaly=Math.abs(z)>1.5;
+    return `<tr>
+      <td>${s.date_label||s.shift_date||'—'}</td>
+      <td><span class="td-zone">${s.zone}</span>${isAnomaly?'<span class="anomaly-badge">Unusual</span>':''}</td>
+      <td>${s.platform||''}</td>
+      <td>${s.hours}h</td>
+      <td>${s.orders}</td>
+      <td class="td-earn">₹${s.earn.toLocaleString('en-IN')}</td>
+      <td style="color:var(--ink-3)">₹${s.predicted.toLocaleString('en-IN')}</td>
+      <td class="td-vs ${cls}">${vs}</td>
+      <td style="font-weight:600;color:var(--ink)">₹${rate}/h</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportCSV(){
+  const rows=[['Date','Zone','Platform','Hours','Orders','Earnings','Predicted','Difference','Rate per hour']];
+  allShifts.forEach(s=>rows.push([s.date_label||s.shift_date||'',s.zone,s.platform||'',s.hours,s.orders,s.earn,s.predicted,s.earn-s.predicted,Math.round(s.earn/s.hours)]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='shiftsense_history.csv'; a.click();
+}
+
+function signOut(){localStorage.removeItem("ss_token");localStorage.removeItem("ss_user");window.location.href="index.html";}
+init();
+</script>
+</body>
+</html>
