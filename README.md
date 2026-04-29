@@ -54,18 +54,18 @@ shiftsense_v5/
 │           ├── wrangling.py   # IQR outlier removal, normalization, CSV parsing
 │           └── zone_tree.py   # CART Decision Tree for zone ranking
 │
-└── frontend/                  # Node.js + Static HTML (PRESERVED)
-    ├── server.js              # Express backend (v1 API, unchanged + v2 proxy)
-    ├── config.js              # Updated: adds fetchV2() helper + v2 probe
-    ├── predict.html           # Updated: live OLS, forecast, z-score, CART
-    ├── dashboard.html         # UNCHANGED ✓
-    ├── shifts.html            # UNCHANGED ✓
-    ├── zones.html             # UNCHANGED ✓
-    ├── analytics.html         # UNCHANGED ✓
-    ├── history.html           # UNCHANGED ✓
-    ├── index.html             # UNCHANGED ✓
-    ├── shared.css             # UNCHANGED ✓
-    └── seed_data.js           # UNCHANGED ✓
+└── frontend/                
+    ├── server.js             
+    ├── config.js             
+    ├── predict.html           
+    ├── dashboard.html         
+    ├── shifts.html            
+    ├── zones.html             
+    ├── analytics.html       
+    ├── history.html          
+    ├── index.html             
+    ├── shared.css           
+    └── seed_data.js          
 ```
 
 ---
@@ -236,30 +236,6 @@ DB_PATH=./shiftsense.db # Must point to same DB
 
 ---
 
-## Changelog: v4 → v5
-
-### Added
-- ✅ FastAPI backend (`backend/`) with full analytics engine
-- ✅ `/api/v2` proxy in Node.js server (graceful fallback if offline)
-- ✅ OLS regression engine (pure Python, no sklearn required)
-- ✅ Exponential smoothing forecaster with seasonal index
-- ✅ CART-style zone decision tree
-- ✅ Z-score performance signal
-- ✅ MLR platform ranking
-- ✅ Full CSV wrangling pipeline (IQR outlier removal)
-- ✅ `POST /api/v2/shifts/bulk` — CSV import with wrangling
-- ✅ `config.js` updated: `fetchV2()` helper + v2 availability probe
-- ✅ `predict.html` updated: all analytics pulled live from v2 API
-
-### Preserved (Unchanged)
-- ✅ All v1 Node.js endpoints — same request/response format
-- ✅ `dashboard.html`, `shifts.html`, `zones.html`, `analytics.html`, `history.html`
-- ✅ `index.html` (login/register page)
-- ✅ `shared.css` — layout, colors, components identical
-- ✅ SQLite schema — same tables, same columns
-- ✅ JWT auth flow — same tokens, same middleware
-
----
 
 ## Production Deployment Notes
 
